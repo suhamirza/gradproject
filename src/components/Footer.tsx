@@ -69,7 +69,7 @@ const Footer: React.FC<FooterProps> = ({ id, className }) => {
               viewport={{ once: true }}
             >
               WHERE WORK<br />
-              GETS DONE
+              GETS DONE!
             </motion.p>
             
             {/* Social media icons */}
