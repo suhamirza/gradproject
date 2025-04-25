@@ -1,12 +1,12 @@
 import React from 'react';
 import { Routes, Route } from 'react-router-dom';
-import SignIn from '../components/SignIn';
+import SignIn from '../components/Auth/SignIn';
 import LandingLayout from '../layouts/LandingLayout';
 import AuthLayout from '../layouts/AuthLayout';
 import AppLayout from '../layouts/AppLayout';
 import HeroSection from '../components/HeroSection';
-import VerificationCode from '../components/VerificationCode';
-import AuthWelcome from '../components/AuthWelcome';
+import VerificationCode from '../components/Auth/VerificationCode';
+import AuthWelcome from '../components/Auth/AuthWelcome';
 
 
 const AppRoutes = () => (
