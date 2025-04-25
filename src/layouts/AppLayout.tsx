@@ -9,7 +9,7 @@ import logo from '../assets/logo/whiteLogo.png'; // adjust path if needed
 const AppLayout = () => (
   <div className="flex flex-col h-screen">
     {/* Navbar */}
-    <nav className="flex items-center justify-between bg-[#180620] h-16 px-8 border-b-2 border-[#d6c6dd]">
+    <nav className="flex items-center justify-between bg-[#180620] h-20 px-8 border-b-2 border-[#d6c6dd]">
       <div className="flex items-center">
         {/* Logo */}
         <img src={logo} alt="Taskify Logo" className="h-16" />
@@ -33,13 +33,13 @@ const AppLayout = () => (
         </div>
         {/* Navigation links */}
         <nav className="flex flex-col gap-3">
-          <a href="#" className="flex items-center px-3 py-2 rounded-lg hover:bg-[#3b2355] transition">
+          <a href="#" className="flex items-center px-3 py-2 rounded-lg hover:bg-[#3b2355] transition text-xl font-bold">
             <GoHomeFill className="w-6 h-6 mr-2" /> Workplaces
           </a>
-          <a href="#" className="flex items-center px-3 py-2 rounded-lg hover:bg-[#3b2355] transition">
+          <a href="#" className="flex items-center px-3 py-2 rounded-lg hover:bg-[#3b2355] transition text-xl font-bold">
             <IoAnalyticsSharp className="w-6 h-6 mr-2" /> Analytics
           </a>
-          <a href="#" className="flex items-center px-3 py-2 rounded-lg hover:bg-[#3b2355] transition">
+          <a href="#" className="flex items-center px-3 py-2 rounded-lg hover:bg-[#3b2355] transition text-xl font-bold">
             <RiSettings5Fill className="w-6 h-6 mr-2" /> Settings
           </a>
         </nav>

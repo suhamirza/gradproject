@@ -20,7 +20,7 @@ const AuthLayout = () => (
       <img
         src={logo}
         alt="Taskify Logo"
-        className="w-28 xs:w-32 sm:w-36 md:w-40 mb-4 sm:mb-6 transition-all duration-300"
+        className="w-28 xs:w-32 sm:w-36 md:w-46 mb-4 sm:mb-6 transition-all duration-300"
       />
       <div className="bg-white/10 border-2 border-white/60 rounded-2xl p-4 xs:p-6 sm:p-8 md:px-20 md:py-8 w-full max-w-xs xs:max-w-sm sm:max-w-md md:max-w-lg shadow-lg backdrop-blur-xs transition-all duration-300">
         <Outlet />
