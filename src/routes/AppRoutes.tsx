@@ -6,6 +6,7 @@ import AuthLayout from '../layouts/AuthLayout';
 import AppLayout from '../layouts/AppLayout';
 import HeroSection from '../components/HeroSection';
 import VerificationCode from '../components/VerificationCode';
+import AuthWelcome from '../components/AuthWelcome';
 
 
 const AppRoutes = () => (
@@ -18,6 +19,7 @@ const AppRoutes = () => (
     <Route element={<AuthLayout />}>
       <Route path="/signin" element={<SignIn />} />
       <Route path="/verify" element={<VerificationCode />} />
+      <Route path="/welcome" element={<AuthWelcome />} />
       {/* Future: <Route path="/signup" element={<SignUp />} /> */}
     </Route>
     {/* Main App Layout (for after login) */}
