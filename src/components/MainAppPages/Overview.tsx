@@ -1,15 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 
-const navButtons = [
-  { label: 'Overview', key: 'overview' },
-  { label: 'Lists', key: 'lists' },
-  { label: 'Chats', key: 'chats' },
-];
-
 const statusOptions = ['Active', 'Completed', 'On Hold'];
 
 export default function Overview() {
-  const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [status, setStatus] = useState('Active');
   const [lead, setLead] = useState('');
@@ -22,8 +15,6 @@ export default function Overview() {
   const memberInputRef = useRef<HTMLInputElement>(null);
   const memberSpanRef = useRef<HTMLSpanElement>(null);
   const projectDetailsRef = useRef<HTMLTextAreaElement>(null);
-  const titleInputRef = useRef<HTMLInputElement>(null);
-  const titleSpanRef = useRef<HTMLSpanElement>(null);
 
   useEffect(() => {
     if (inputRef.current && spanRef.current) {
@@ -36,22 +27,6 @@ export default function Overview() {
       memberInputRef.current.style.width = `${memberSpanRef.current.offsetWidth}px`;
     }
   }, [memberInput]);
-
-  useEffect(() => {
-    if (titleInputRef.current && titleSpanRef.current) {
-      const input = titleInputRef.current;
-      const span = titleSpanRef.current;
-      const computed = window.getComputedStyle(input);
-      span.style.font = computed.font;
-      span.style.fontWeight = computed.fontWeight;
-      span.style.fontSize = computed.fontSize;
-      span.style.fontFamily = computed.fontFamily;
-      span.style.letterSpacing = computed.letterSpacing;
-      span.style.textTransform = computed.textTransform;
-      // Set width: span width + left padding - right offset
-      input.style.width = (span.offsetWidth + 12) + 'px'; // 12px = 16px left padding - 4px right offset
-    }
-  }, [title]);
 
   const handleMemberAdd = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && memberInput.trim()) {
@@ -76,40 +51,8 @@ export default function Overview() {
 
   return (
     <div className="flex flex-col items-start">
-      {/* Title Input */}
-      <div className="inline-block mb-6 align-top">
-        <input
-          type="text"
-          value={title}
-          onChange={(e: React.ChangeEvent<HTMLInputElement>) => setTitle(e.target.value)}
-          placeholder="Title"
-          className="text-[2.75rem] font-extrabold bg-transparent border-none outline-none placeholder:text-gray-400 transition-colors duration-150 hover:bg-[#f7f0ff] rounded-xl box-content pl-4 pr-1"
-          ref={titleInputRef}
-          style={{ width: 'auto', margin: 0 }}
-        />
-        <span
-          ref={titleSpanRef}
-          className="absolute left-[-9999px] top-0 select-none whitespace-pre font-extrabold text-[2.75rem] pl-4 pr-1"
-          aria-hidden="true"
-        >
-          {title || 'Title'}
-        </span>
-      </div>
-      {/* Navigation Buttons */}
-      <div className="flex gap-4 mb-12">
-        {navButtons.map(btn => (
-          <button
-            key={btn.key}
-            className={`px-9 py-3 rounded-xl border-2 ${btn.key === 'overview' ? 'border-[#8e44ec] bg-[#f7f0ff] text-[#8e44ec] font-extrabold' : 'border-gray-300 bg-white text-gray-900 font-bold'} text-[1.375rem] transition`}
-          >
-            {btn.label}
-          </button>
-        ))}
-      </div>
-      {/* Divider */}
-      <hr className="w-full border-t-1 border-[#180620] mb-8" />
       {/* Project Title Display */}
-      <h2 className="font-extrabold text-[2.375rem] mb-4 mt-0">{title || 'Title'}</h2>
+      <h2 className="font-extrabold text-[2.375rem] mb-4 mt-0">Title</h2>
       {/* Description Input */}
       <input
         type="text"

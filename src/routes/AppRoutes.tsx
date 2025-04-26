@@ -9,6 +9,7 @@ import VerificationCode from '../components/Auth/VerificationCode';
 import AuthWelcome from '../components/Auth/AuthWelcome';
 import Overview from '../components/MainAppPages/Overview';
 import MainPage from '../components/MainAppPages/MainPage';
+import MainAppPageLayout from '../layouts/MainAppPageLayout';
 
 const AppRoutes = () => (
   <Routes>
@@ -28,7 +29,11 @@ const AppRoutes = () => (
       <Route path="/app" element={<MainPage />} />
       <Route path="/app/join-workplace" element={<div>Join Workplace Coming Soon</div>} />
       <Route path="/app/create-workplace" element={<div>Create Workplace Coming Soon</div>} />
-      <Route path="/app/overview" element={<Overview />} />
+      <Route path="/app/overview" element={
+        <MainAppPageLayout>
+          <Overview />
+        </MainAppPageLayout>
+      } />
     </Route>
   </Routes>
 );
