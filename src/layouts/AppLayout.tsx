@@ -7,7 +7,7 @@ import { GoHomeFill } from "react-icons/go";
 import logo from '../assets/logo/whiteLogo.png'; // adjust path if needed
 
 const AppLayout = () => (
-  <div className="flex flex-col h-screen">
+  <div className="flex flex-col min-h-screen">
     {/* Navbar */}
     <nav className="flex items-center justify-between bg-[#180620] h-20 px-8 border-b-2 border-[#d6c6dd]">
       <div className="flex items-center">
@@ -45,7 +45,7 @@ const AppLayout = () => (
         </nav>
       </aside>
       {/* Main Content */}
-      <main className="flex-1 container-main p-12 pl-16">
+      <main className="flex-1 container-main pr-16 pt-8 pl-16">
         <Outlet />
       </main>
     </div>
