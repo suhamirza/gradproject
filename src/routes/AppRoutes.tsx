@@ -7,7 +7,7 @@ import AppLayout from '../layouts/AppLayout';
 import HeroSection from '../components/HeroSection';
 import VerificationCode from '../components/Auth/VerificationCode';
 import AuthWelcome from '../components/Auth/AuthWelcome';
-
+import Overview from '../components/Overview';
 
 const AppRoutes = () => (
   <Routes>
@@ -26,6 +26,7 @@ const AppRoutes = () => (
     <Route element={<AppLayout />}>
       <Route path="/app" element={<div>Main Task Management App Coming Soon</div>} />
       {/* Add more /app/* routes here */}
+      <Route path="/overview" element={<Overview />} />
     </Route>
   </Routes>
 );

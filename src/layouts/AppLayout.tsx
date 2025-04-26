@@ -45,7 +45,7 @@ const AppLayout = () => (
         </nav>
       </aside>
       {/* Main Content */}
-      <main className="flex-1 flex flex-col items-center justify-center p-8 overflow-auto">
+      <main className="flex-1 container-main p-12 pl-16">
         <Outlet />
       </main>
     </div>
