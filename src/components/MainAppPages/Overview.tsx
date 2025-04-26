@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
+import SplitText from '../ReactBits/SplitText';
+import FadeContent from '../ReactBits/FadeContent';
 
 const navButtons = [
   { label: 'Overview', key: 'overview' },
@@ -77,6 +79,7 @@ export default function Overview() {
   return (
     <div className="flex flex-col items-start">
       {/* Title Input */}
+      <FadeContent duration={900} delay={100}>
       <div className="inline-block mb-6 align-top">
         <input
           type="text"
@@ -95,7 +98,9 @@ export default function Overview() {
           {title || 'Title'}
         </span>
       </div>
+      </FadeContent>
       {/* Navigation Buttons */}
+      <FadeContent duration={900} delay={200}>
       <div className="flex gap-4 mb-12">
         {navButtons.map(btn => (
           <button
@@ -106,11 +111,16 @@ export default function Overview() {
           </button>
         ))}
       </div>
+      </FadeContent>
       {/* Divider */}
       <hr className="w-full border-t-1 border-[#180620] mb-8" />
       {/* Project Title Display */}
+      <FadeContent duration={900} delay={300}>
       <h2 className="font-extrabold text-[2.375rem] mb-4 mt-0">{title || 'Title'}</h2>
+      </FadeContent>
       {/* Description Input */}
+      <FadeContent duration={900} delay={100}>
+
       <input
         type="text"
         value={description}
@@ -118,7 +128,9 @@ export default function Overview() {
         placeholder="Description..."
         className="text-[1.625rem] w-full mb-9 bg-transparent border-none outline-none text-gray-400 placeholder:text-gray-400"
       />
+      </FadeContent>
       {/* Status Dropdown */}
+      <FadeContent duration={900} delay={100}>
       <div className="mb-7 flex items-center">
         <label className="font-bold mr-5 text-[1.375rem]">Status</label>
         <select
@@ -137,7 +149,9 @@ export default function Overview() {
           ))}
         </select>
       </div>
+      </FadeContent>
       {/* Team Lead Input */}
+      <FadeContent duration={900} delay={100}>
       <div className="mb-7 flex items-center">
         <label className="font-bold mr-5 text-[1.375rem]">Lead</label>
         <div className="relative flex items-center">
@@ -159,7 +173,9 @@ export default function Overview() {
           </span>
         </div>
       </div>
+      </FadeContent>
       {/* Members Input */}
+      <FadeContent duration={900} delay={100}>
       <div className="mb-7 flex items-center w-full gap-4">
         <label className="font-bold mr-5 text-[1.375rem] whitespace-nowrap">Members</label>
         <div className="flex flex-wrap gap-4 items-center flex-1 min-w-0">
@@ -196,9 +212,11 @@ export default function Overview() {
           </div>
         </div>
       </div>
+      </FadeContent>
       {/* Divider */}
       <hr className="w-full border-t-1 border-[##9CA3AF] mt-2" />
       {/* Project Details Textarea */}
+      <FadeContent duration={900} delay={100}>
       <textarea
         ref={projectDetailsRef}
         value={projectDetails}
@@ -208,6 +226,7 @@ export default function Overview() {
         style={{ minHeight: '3.5rem', resize: 'none' }}
         rows={2}
       />
+      </FadeContent>
     </div>
   );
 }
