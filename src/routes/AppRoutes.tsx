@@ -8,6 +8,7 @@ import HeroSection from '../components/HeroSection';
 import VerificationCode from '../components/Auth/VerificationCode';
 import AuthWelcome from '../components/Auth/AuthWelcome';
 import Overview from '../components/Overview';
+import MainPage from '../components/MainAppPages/MainPage';
 
 const AppRoutes = () => (
   <Routes>
@@ -25,7 +26,11 @@ const AppRoutes = () => (
     {/* Main App Layout (for after login) */}
     <Route element={<AppLayout />}>
       <Route path="/app" element={<div>Main Task Management App Coming Soon</div>} />
+      <Route path="/appMain" element={<MainPage />} />
+
       {/* Add more /app/* routes here */}
+      <Route path="/app/join-workplace" element={<div>Join Workplace Coming Soon</div>} />
+      <Route path="/app/create-workplace" element={<div>Create Workplace Coming Soon</div>} />
       <Route path="/overview" element={<Overview />} />
     </Route>
   </Routes>
