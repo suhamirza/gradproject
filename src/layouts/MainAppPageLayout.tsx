@@ -1,6 +1,8 @@
 import React, { useRef, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useTitle } from '../context/TitleContext';
+import FadeContent from '../components/ReactBits/FadeContent';
+
 
 interface MainAppPageLayoutProps {
   children: React.ReactNode;
@@ -39,6 +41,7 @@ const MainAppPageLayout: React.FC<MainAppPageLayoutProps> = ({ children }) => {
     <div className="flex flex-col items-start w-full">
       {/* Title Input */}
       <div className="inline-block mb-6 align-top">
+        <FadeContent>
         <input
           type="text"
           value={title}
@@ -55,9 +58,12 @@ const MainAppPageLayout: React.FC<MainAppPageLayoutProps> = ({ children }) => {
         >
           {title || 'Title'}
         </span>
+        </FadeContent>
       </div>
       {/* Navigation Buttons */}
       <div className="flex gap-4 mb-12">
+        <FadeContent>
+
         {navButtons.map(btn => (
           <button
             key={btn.key}
@@ -67,6 +73,7 @@ const MainAppPageLayout: React.FC<MainAppPageLayoutProps> = ({ children }) => {
             {btn.label}
           </button>
         ))}
+        </FadeContent>
       </div>
       {/* Divider */}
       <hr className="w-full border-t-1 border-[#180620] mb-8" />
