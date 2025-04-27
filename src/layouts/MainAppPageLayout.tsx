@@ -61,13 +61,12 @@ const MainAppPageLayout: React.FC<MainAppPageLayoutProps> = ({ children }) => {
         </FadeContent>
       </div>
       {/* Navigation Buttons */}
-      <div className="flex gap-4 mb-12">
+      <div className="flex mb-12">
         <FadeContent>
-
-        {navButtons.map(btn => (
+        {navButtons.map((btn, idx) => (
           <button
             key={btn.key}
-            className={`px-9 py-3 rounded-xl border-2 hover:bg-[#f7f0ff] ${location.pathname.includes(btn.route) ? 'border-[#8e44ec] bg-[#f7f0ff] text-[#8e44ec] font-extrabold' : 'border-gray-300 bg-white text-gray-900 font-bold'} text-[1.375rem] transition`}
+            className={`px-9 py-3 rounded-xl border-2 hover:bg-[#f7f0ff] ${location.pathname.includes(btn.route) ? 'border-[#8e44ec] bg-[#f7f0ff] text-[#8e44ec] font-extrabold' : 'border-gray-300 bg-white text-gray-900 font-bold'} text-[1.375rem] transition${idx !== navButtons.length - 1 ? ' mr-4' : ''}`}
             onClick={() => navigate(btn.route)}
           >
             {btn.label}
