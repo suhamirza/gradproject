@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useTitle } from '../../context/TitleContext';
 
 const statusOptions = ['Active', 'Completed', 'On Hold'];
 
 export default function Overview() {
+  const { title } = useTitle();
   const [description, setDescription] = useState('');
   const [status, setStatus] = useState('Active');
   const [lead, setLead] = useState('');
@@ -52,7 +54,7 @@ export default function Overview() {
   return (
     <div className="flex flex-col items-start">
       {/* Project Title Display */}
-      <h2 className="font-extrabold text-[2.375rem] mb-4 mt-0">Title</h2>
+      <h2 className="font-extrabold text-[2.375rem] mb-4 mt-0">{title || 'Title'}</h2>
       {/* Description Input */}
       <input
         type="text"
@@ -69,10 +71,10 @@ export default function Overview() {
           onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setStatus(e.target.value)}
           className={
             status === 'Active'
-              ? 'px-2 py-2 text-center rounded-xl border-2 font-bold outline-none text-white text-[1.375rem] ml-3 bg-[#43d13a] border-[#43d13a] w-auto min-w-0'
+              ? 'px-2 py-2 text-center rounded-xl border-2 font-bold outline-none text-white text-[1.375rem] ml-3 bg-[#43d13a] border-[#43d13a] w-auto min-w-0 cursor-pointer'
             : status === 'On Hold'
-              ? 'px-4 py-2 text-center rounded-xl border-2 font-bold outline-none text-white text-[1.375rem] ml-3 bg-[#e74c3c] border-[#e74c3c] w-auto min-w-0'
-              : 'px-4 py-2 text-center rounded-xl border-2 font-bold outline-none text-white text-[1.375rem] ml-3 bg-gray-400 border-gray-400 w-auto min-w-0'
+              ? 'px-4 py-2 text-center rounded-xl border-2 font-bold outline-none text-white text-[1.375rem] ml-3 bg-[#e74c3c] border-[#e74c3c] w-auto min-w-0 cursor-pointer'
+              : 'px-4 py-2 text-center rounded-xl border-2 font-bold outline-none text-white text-[1.375rem] ml-3 bg-gray-400 border-gray-400 w-auto min-w-0 cursor-pointer'
           }
         >
           {statusOptions.map(opt => (

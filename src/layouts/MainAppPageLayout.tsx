@@ -1,8 +1,9 @@
-import React, { useRef, useEffect, useState, ReactNode } from 'react';
+import React, { useRef, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { useTitle } from '../context/TitleContext';
 
 interface MainAppPageLayoutProps {
-  children: ReactNode;
+  children: React.ReactNode;
 }
 
 const navButtons = [
@@ -12,7 +13,7 @@ const navButtons = [
 ];
 
 const MainAppPageLayout: React.FC<MainAppPageLayoutProps> = ({ children }) => {
-  const [title, setTitle] = useState('');
+  const { title, setTitle } = useTitle();
   const titleInputRef = useRef<HTMLInputElement>(null);
   const titleSpanRef = useRef<HTMLSpanElement>(null);
   const location = useLocation();
@@ -41,7 +42,7 @@ const MainAppPageLayout: React.FC<MainAppPageLayoutProps> = ({ children }) => {
         <input
           type="text"
           value={title}
-          onChange={(e: React.ChangeEvent<HTMLInputElement>) => setTitle(e.target.value)}
+          onChange={(e) => setTitle(e.target.value)}
           placeholder="Title"
           className="text-[2.75rem] font-extrabold bg-transparent border-none outline-none placeholder:text-gray-400 transition-colors duration-150 hover:bg-[#f7f0ff] rounded-xl box-content pl-4 pr-1"
           ref={titleInputRef}
@@ -60,7 +61,7 @@ const MainAppPageLayout: React.FC<MainAppPageLayoutProps> = ({ children }) => {
         {navButtons.map(btn => (
           <button
             key={btn.key}
-            className={`px-9 py-3 rounded-xl border-2 ${location.pathname.includes(btn.route) ? 'border-[#8e44ec] bg-[#f7f0ff] text-[#8e44ec] font-extrabold' : 'border-gray-300 bg-white text-gray-900 font-bold'} text-[1.375rem] transition`}
+            className={`px-9 py-3 rounded-xl border-2 hover:bg-[#f7f0ff] ${location.pathname.includes(btn.route) ? 'border-[#8e44ec] bg-[#f7f0ff] text-[#8e44ec] font-extrabold' : 'border-gray-300 bg-white text-gray-900 font-bold'} text-[1.375rem] transition`}
             onClick={() => navigate(btn.route)}
           >
             {btn.label}
