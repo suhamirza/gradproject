@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useTitle } from '../../context/TitleContext';
+import FadeContent from '../../components/ReactBits/FadeContent';
+
 
 const statusOptions = ['Active', 'Completed', 'On Hold'];
 
@@ -53,45 +55,12 @@ export default function Overview() {
 
   return (
     <div className="flex flex-col items-start">
-      {/* Title Input */}
-      <div className="inline-block mb-6 align-top">
-        <input
-          type="text"
-          value={title}
-          onChange={(e: React.ChangeEvent<HTMLInputElement>) => setTitle(e.target.value)}
-          placeholder="Title"
-          className="text-[2.75rem] font-extrabold bg-transparent border-none outline-none placeholder:text-gray-400 transition-colors duration-150 hover:bg-[#f7f0ff] rounded-xl box-content pl-4 pr-1"
-          ref={titleInputRef}
-          style={{ width: 'auto', margin: 0 }}
-        />
-        <span
-          ref={titleSpanRef}
-          className="absolute left-[-9999px] top-0 select-none whitespace-pre font-extrabold text-[2.75rem] pl-4 pr-1"
-          aria-hidden="true"
-        >
-          {title || 'Title'}
-        </span>
-      </div>
-      {/* Navigation Buttons */}
-      <div className="flex gap-4 mb-12">
-        {navButtons.map(btn => (
-          <button
-            key={btn.key}
-            className={`px-9 py-3 rounded-xl border-2 ${btn.key === 'overview' ? 'border-[#8e44ec] bg-[#f7f0ff] text-[#8e44ec] font-extrabold' : 'border-gray-300 bg-white text-gray-900 font-bold'} text-[1.375rem] transition`}
-          >
-            {btn.label}
-          </button>
-        ))}
-      </div>
-      {/* Divider */}
-      <hr className="w-full border-t-1 border-[#180620] mb-8" />
+      <FadeContent>
       {/* Project Title Display */}
-      <FadeContent duration={900} delay={300}>
       <h2 className="font-extrabold text-[2.375rem] mb-4 mt-0">{title || 'Title'}</h2>
       </FadeContent>
       {/* Description Input */}
-      <FadeContent duration={900} delay={100}>
-
+      <FadeContent>
       <input
         type="text"
         value={description}
@@ -101,7 +70,7 @@ export default function Overview() {
       />
       </FadeContent>
       {/* Status Dropdown */}
-      <FadeContent duration={900} delay={100}>
+      <FadeContent>
       <div className="mb-7 flex items-center">
         <label className="font-bold mr-5 text-[1.375rem]">Status</label>
         <select
@@ -122,7 +91,7 @@ export default function Overview() {
       </div>
       </FadeContent>
       {/* Team Lead Input */}
-      <FadeContent duration={900} delay={100}>
+      <FadeContent>
       <div className="mb-7 flex items-center">
         <label className="font-bold mr-5 text-[1.375rem]">Lead</label>
         <div className="relative flex items-center">
@@ -146,7 +115,7 @@ export default function Overview() {
       </div>
       </FadeContent>
       {/* Members Input */}
-      <FadeContent duration={900} delay={100}>
+      <FadeContent>
       <div className="mb-7 flex items-center w-full gap-4">
         <label className="font-bold mr-5 text-[1.375rem] whitespace-nowrap">Members</label>
         <div className="flex flex-wrap gap-4 items-center flex-1 min-w-0">
@@ -187,7 +156,7 @@ export default function Overview() {
       {/* Divider */}
       <hr className="w-full border-t-1 border-[##9CA3AF] mt-2" />
       {/* Project Details Textarea */}
-      <FadeContent duration={900} delay={100}>
+      <FadeContent>
       <textarea
         ref={projectDetailsRef}
         value={projectDetails}
