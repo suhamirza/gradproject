@@ -7,12 +7,12 @@ import { GoHomeFill } from "react-icons/go";
 import logo from '../assets/logo/whiteLogo.png'; // adjust path if needed
 
 const AppLayout = () => (
-  <div className="flex flex-col min-h-screen">
+  <div className="flex flex-col h-screen">
     {/* Navbar */}
     <nav className="flex items-center justify-between bg-[#180620] h-20 px-8 border-b-2 border-[#d6c6dd]">
-      <div className="flex items-center">
+      <div className="flex text-white text-4xl font-bold items-center">
         {/* Logo */}
-        <img src={logo} alt="Taskify Logo" className="h-16" />
+        TASK<span className="text-[#9759b3]">IFY.</span>
       </div>
       <div>
         {/* Notification bell */}

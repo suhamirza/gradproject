@@ -1,17 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
-import SplitText from '../ReactBits/SplitText';
-import FadeContent from '../ReactBits/FadeContent';
-
-const navButtons = [
-  { label: 'Overview', key: 'overview' },
-  { label: 'Lists', key: 'lists' },
-  { label: 'Chats', key: 'chats' },
-];
+import { useTitle } from '../../context/TitleContext';
 
 const statusOptions = ['Active', 'Completed', 'On Hold'];
 
 export default function Overview() {
-  const [title, setTitle] = useState('');
+  const { title } = useTitle();
   const [description, setDescription] = useState('');
   const [status, setStatus] = useState('Active');
   const [lead, setLead] = useState('');
@@ -24,8 +17,6 @@ export default function Overview() {
   const memberInputRef = useRef<HTMLInputElement>(null);
   const memberSpanRef = useRef<HTMLSpanElement>(null);
   const projectDetailsRef = useRef<HTMLTextAreaElement>(null);
-  const titleInputRef = useRef<HTMLInputElement>(null);
-  const titleSpanRef = useRef<HTMLSpanElement>(null);
 
   useEffect(() => {
     if (inputRef.current && spanRef.current) {
@@ -38,22 +29,6 @@ export default function Overview() {
       memberInputRef.current.style.width = `${memberSpanRef.current.offsetWidth}px`;
     }
   }, [memberInput]);
-
-  useEffect(() => {
-    if (titleInputRef.current && titleSpanRef.current) {
-      const input = titleInputRef.current;
-      const span = titleSpanRef.current;
-      const computed = window.getComputedStyle(input);
-      span.style.font = computed.font;
-      span.style.fontWeight = computed.fontWeight;
-      span.style.fontSize = computed.fontSize;
-      span.style.fontFamily = computed.fontFamily;
-      span.style.letterSpacing = computed.letterSpacing;
-      span.style.textTransform = computed.textTransform;
-      // Set width: span width + left padding - right offset
-      input.style.width = (span.offsetWidth + 12) + 'px'; // 12px = 16px left padding - 4px right offset
-    }
-  }, [title]);
 
   const handleMemberAdd = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && memberInput.trim()) {
@@ -79,7 +54,6 @@ export default function Overview() {
   return (
     <div className="flex flex-col items-start">
       {/* Title Input */}
-      <FadeContent duration={900} delay={100}>
       <div className="inline-block mb-6 align-top">
         <input
           type="text"
@@ -98,9 +72,7 @@ export default function Overview() {
           {title || 'Title'}
         </span>
       </div>
-      </FadeContent>
       {/* Navigation Buttons */}
-      <FadeContent duration={900} delay={200}>
       <div className="flex gap-4 mb-12">
         {navButtons.map(btn => (
           <button
@@ -111,7 +83,6 @@ export default function Overview() {
           </button>
         ))}
       </div>
-      </FadeContent>
       {/* Divider */}
       <hr className="w-full border-t-1 border-[#180620] mb-8" />
       {/* Project Title Display */}
@@ -138,10 +109,10 @@ export default function Overview() {
           onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setStatus(e.target.value)}
           className={
             status === 'Active'
-              ? 'px-2 py-2 text-center rounded-xl border-2 font-bold outline-none text-white text-[1.375rem] ml-3 bg-[#43d13a] border-[#43d13a] w-auto min-w-0'
+              ? 'px-2 py-2 text-center rounded-xl border-2 font-bold outline-none text-white text-[1.375rem] ml-3 bg-[#43d13a] border-[#43d13a] w-auto min-w-0 cursor-pointer'
             : status === 'On Hold'
-              ? 'px-4 py-2 text-center rounded-xl border-2 font-bold outline-none text-white text-[1.375rem] ml-3 bg-[#e74c3c] border-[#e74c3c] w-auto min-w-0'
-              : 'px-4 py-2 text-center rounded-xl border-2 font-bold outline-none text-white text-[1.375rem] ml-3 bg-gray-400 border-gray-400 w-auto min-w-0'
+              ? 'px-4 py-2 text-center rounded-xl border-2 font-bold outline-none text-white text-[1.375rem] ml-3 bg-[#e74c3c] border-[#e74c3c] w-auto min-w-0 cursor-pointer'
+              : 'px-4 py-2 text-center rounded-xl border-2 font-bold outline-none text-white text-[1.375rem] ml-3 bg-gray-400 border-gray-400 w-auto min-w-0 cursor-pointer'
           }
         >
           {statusOptions.map(opt => (
