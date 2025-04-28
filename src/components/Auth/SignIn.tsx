@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import FadeContent from "../ReactBits/FadeContent";
 
 interface SignInProps {
   id?: string;
@@ -10,9 +11,12 @@ const SignIn: React.FC<SignInProps> = ({ id, className }) => {
 
   return (
     <>
+      <FadeContent duration={900} delay={200}>
       <h2 className="text-4xl font-bold text-white mb-5 text-center">SIGN IN</h2>
+      </FadeContent>
       <form className="flex flex-col gap-5" autoComplete="off">
         <div>
+          <FadeContent duration={900} delay={200}>
           <label className="block text-xs font-bold text-white mb-1 tracking-widest">
             EMAIL
           </label>
@@ -26,8 +30,10 @@ const SignIn: React.FC<SignInProps> = ({ id, className }) => {
               <svg height="18" width="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><polyline points="3 7 12 13 21 7"/></svg>
             </span>
           </div>
+          </FadeContent>
         </div>
         <div>
+          <FadeContent duration={900} delay={400}>
           <label className="block text-xs font-bold text-white mb-1 tracking-widest">
             PASSWORD
           </label>
@@ -56,9 +62,12 @@ const SignIn: React.FC<SignInProps> = ({ id, className }) => {
               )}
             </button>
           </div>
+          </FadeContent>
         </div>
         <div className="flex flex-col gap-1">
+          <FadeContent duration={900} delay={200}>
           <span className="text-xs font-bold text-white tracking-widest">DON'T HAVE AN ACCOUNT? <a href="#" className="text-violet-400 hover:text-violet-600 transition">SIGN UP</a></span>
+          </FadeContent>
         </div>
         <button
           type="submit"
@@ -66,6 +75,8 @@ const SignIn: React.FC<SignInProps> = ({ id, className }) => {
         >
           SIGN IN
         </button>
+
+        
         <div className="flex items-center justify-center ">
           <span className="text-xs font-bold text-white tracking-widest">OR</span>
         </div>
@@ -93,6 +104,7 @@ const SignIn: React.FC<SignInProps> = ({ id, className }) => {
         </button>
       </form>
     </>
+    
   );
 };
 
