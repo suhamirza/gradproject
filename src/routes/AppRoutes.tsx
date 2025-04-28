@@ -10,6 +10,7 @@ import AuthWelcome from '../components/Auth/AuthWelcome';
 import Overview from '../components/MainAppPages/Overview';
 import MainPage from '../components/MainAppPages/MainPage';
 import MainAppPageLayout from '../layouts/MainAppPageLayout';
+import Lists from '../components/MainAppPages/Lists'; // Assuming Lists component is located here
 import { TitleProvider } from '../context/TitleContext';
 
 const AppRoutes = () => (
@@ -29,11 +30,17 @@ const AppRoutes = () => (
     <Route element={<AppLayout />}>
       <Route path="/app" element={<MainPage />} />
       <Route path="/app/join-workplace" element={<div>Join Workplace Coming Soon</div>} />
-      <Route path="/app/create-workplace" element={<div>Create Workplace Coming Soon</div>} />
       <Route path="/app/overview" element={
         <TitleProvider>
           <MainAppPageLayout>
             <Overview />
+          </MainAppPageLayout>
+        </TitleProvider>
+      } />
+      <Route path="/app/lists" element={
+        <TitleProvider>
+          <MainAppPageLayout>
+            <Lists />
           </MainAppPageLayout>
         </TitleProvider>
       } />
