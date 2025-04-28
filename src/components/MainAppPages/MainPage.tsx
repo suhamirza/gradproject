@@ -43,7 +43,7 @@ const MainPage: React.FC = () => {
           <button
             className="bg-[#180620] text-white text-lg font-bold px-8 py-4 rounded-xl shadow transition hover:bg-[#2a0a3c] focus:outline-none transition delay-150 duration-300 ease-in-out hover:-translate-y-1"
             style={{ border: 'none' }}
-            onClick={() => navigate('/app/join-workplace')}
+            onClick={() => navigate('/app/overview')}
           >
             join an existing workplace
           </button>
@@ -51,7 +51,7 @@ const MainPage: React.FC = () => {
         <FadeContent duration={900} delay={200}>
           <button
             className="bg-white text-[#180620] text-lg font-bold px-8 py-4 rounded-xl shadow border-2 border-[#180620] transition hover:bg-[#f4f0f8] focus:outline-none transition delay-150 duration-300 ease-in-out hover:-translate-y-1"
-            onClick={() => navigate('/app/create-workplace')}
+            onClick={() => navigate('/app/overview')}
           >
             Create a new workplace
           </button>
