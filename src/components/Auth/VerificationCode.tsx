@@ -1,4 +1,5 @@
 import React, { useRef, useState } from "react";
+import FadeContent from "../ReactBits/FadeContent";
 
 const CODE_LENGTH = 5;
 
@@ -36,12 +37,15 @@ const VerificationCode: React.FC = () => {
 
   return (
     <div className="flex flex-col items-center">
+      <FadeContent duration={900} delay={200}>
       <h2 className="text-4xl font-bold text-white mb-3 text-center tracking-widest">SECURITY</h2>
       <p className="text-white text-center mb-8 font-semibold">
         PLEASE ENTER THE VERIFICATION CODE SENT<br />TO YOUR EMAIL
       </p>
+      </FadeContent>
       <form className="flex flex-col items-center w-full gap-6">
         <div className="flex gap-3 mb-2">
+          <FadeContent duration={900} delay={200}>
           {code.map((digit: string, idx: number): React.ReactNode => (
             <input
               key={idx}
@@ -57,8 +61,10 @@ const VerificationCode: React.FC = () => {
               autoFocus={idx === 0}
             />
           ))}
+          </FadeContent>
         </div>
         <div className="w-full flex justify-end">
+          <FadeContent duration={900} delay={200}>
           <button
             type="button"
             className="text-xs text-white/80 underline hover:text-violet-300 transition"
@@ -66,6 +72,7 @@ const VerificationCode: React.FC = () => {
           >
             RESEND THE CODE
           </button>
+          </FadeContent>
         </div>
       </form>
     </div>
