@@ -10,7 +10,8 @@ import AuthWelcome from '../components/Auth/AuthWelcome';
 import Overview from '../components/MainAppPages/Overview';
 import MainPage from '../components/MainAppPages/MainPage';
 import MainAppPageLayout from '../layouts/MainAppPageLayout';
-import Lists from '../components/MainAppPages/Lists'; // Assuming Lists component is located here
+import Lists from '../components/MainAppPages/Lists';
+import Chats from '../components/MainAppPages/Chats';
 import { TitleProvider } from '../context/TitleContext';
 
 const AppRoutes = () => (
@@ -41,6 +42,13 @@ const AppRoutes = () => (
         <TitleProvider>
           <MainAppPageLayout>
             <Lists />
+          </MainAppPageLayout>
+        </TitleProvider>
+      } />
+      <Route path="/app/chats" element={
+        <TitleProvider>
+          <MainAppPageLayout>
+            <Chats />
           </MainAppPageLayout>
         </TitleProvider>
       } />
