@@ -304,9 +304,10 @@ const Chats: React.FC = () => {
           </div>
         )}
       </div>
+
       {/* Chat Window */}
       <div className="flex-1 flex flex-col bg-[#fcfbff] h-full min-h-0 relative">
-        <div className="flex items-center p-6 border-b border-gray-200 cursor-pointer select-none" onClick={() => selectedChat.members.length > 2 && setShowMembersModal(true)}>
+        <div className="flex items-center p-6 border-b border-gray-200 cursor-pointer select-none" onClick={() => setShowMembersModal(true)}>
           <div className="bg-purple-400 rounded-full w-10 h-10 flex items-center justify-center text-lg font-bold text-white mr-4">
             {selectedChat.name[0]}
           </div>
@@ -476,8 +477,8 @@ const Chats: React.FC = () => {
                     }`}
                     style={{wordBreak: 'break-word'}}
                   >
-                    {/* Show sender name for group chats and not for your own messages */}
-                    {selectedChat.members.length > 2 && msg.sender !== "You" && (
+                    {/* Always show sender name above message unless it's 'You' */}
+                    {msg.sender !== "You" && (
                       <div className="font-bold text-xs mb-1 text-purple-700">{msg.sender}</div>
                     )}
                     {msg.text}
