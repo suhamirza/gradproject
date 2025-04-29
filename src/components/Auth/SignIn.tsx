@@ -1,5 +1,7 @@
 import React, { useState } from "react";
 import FadeContent from "../ReactBits/FadeContent";
+import SplitText from '../ReactBits/SplitText';
+
 
 interface SignInProps {
   id?: string;
@@ -12,7 +14,17 @@ const SignIn: React.FC<SignInProps> = ({ id, className }) => {
   return (
     <>
       <FadeContent duration={900} delay={200}>
-      <h2 className="text-4xl font-bold text-white mb-5 text-center">SIGN IN</h2>
+        <div className="flex w-full justify-center leading-[1.2] mr-2">
+          <SplitText
+            text="SIGN IN"
+            animationFrom={{ opacity: 0, transform: 'translate3d(0,20px,0)' }}
+          animationTo={{ opacity: 1, transform: 'translate3d(0,0,0)' }}
+          delay={20}
+          textAlign="center"
+          className="text-4xl font-bold text-white mb-12 text-center tracking-widest leading-[1.2] mr-2"
+
+          />
+        </div>
       </FadeContent>
       <form className="flex flex-col gap-5" autoComplete="off">
         <div>

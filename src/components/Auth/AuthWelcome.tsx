@@ -1,5 +1,6 @@
 import React, { useState, ChangeEvent } from "react";
 import FadeContent from "../ReactBits/FadeContent";
+import SplitText from '../ReactBits/SplitText';
 
 
 const AuthWelcome: React.FC = () => {
@@ -12,12 +13,17 @@ const AuthWelcome: React.FC = () => {
   return (
     <div className="flex flex-col items-center">
       <FadeContent duration={900} delay={200}>
-      <h2 className="text-4xl font-bold text-white mb-8 text-center tracking-widest">
-        WELCOME!
-      </h2>
+        <SplitText
+          text="WELCOME!"
+          animationFrom={{ opacity: 0, transform: 'translate3d(0,20px,0)' }}
+          animationTo={{ opacity: 1, transform: 'translate3d(0,0,0)' }}
+          delay={20}
+          textAlign="center"
+          className="text-4xl font-bold text-white mb-12 text-center tracking-widest"
+        />
       </FadeContent>
       <form className="flex flex-col items-center w-full gap-8">
-        <div className="w-full flex flex-col items-center">
+        <div className="w-full flex flex-col items-center mt-4">
           <FadeContent duration={900} delay={200}>
           <label
             htmlFor="name"
