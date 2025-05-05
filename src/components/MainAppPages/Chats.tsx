@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import type { ChangeEvent, FormEvent } from "react";
+import FadeContent from "../ReactBits/FadeContent";
 
 // Types for chat and message
 interface Message {
@@ -172,7 +173,7 @@ const Chats: React.FC = () => {
   return (
     <div className="flex h-full min-h-0" style={{height: '100%'}}>
       {/* Sidebar Chat List */}
-      <div className="w-1/3 min-w-[250px] border-r border-gray-300 bg-white flex flex-col h-full min-h-0">
+      <FadeContent className="w-1/3 min-w-[250px] border-r border-gray-300 bg-white flex flex-col h-full min-h-0" delay={100}>
         {/* Header with Chats title and plus button */}
         <div className="flex items-center justify-between px-6 py-6 pb-4">
           <h2 className="text-2xl font-bold">Chats</h2>
@@ -193,27 +194,28 @@ const Chats: React.FC = () => {
         />
         <div className="flex-1 overflow-y-auto">
           {filteredChats.map((chat) => (
-            <div
-              key={chat.id}
-              className={`flex items-center px-6 py-3 cursor-pointer transition-colors ${selectedChat.id === chat.id ? 'bg-gray-100' : 'hover:bg-gray-50'}`}
-              onClick={() => setSelectedChat(chat)}
-            >
-              <div className="bg-purple-400 rounded-full w-8 h-8 flex items-center justify-center text-md font-bold text-white mr-4">
-                {chat.name[0]}
+            <FadeContent key={chat.id} delay={150} duration={800}>
+              <div
+                className={`flex items-center px-6 py-3 cursor-pointer transition-colors ${selectedChat.id === chat.id ? 'bg-gray-100' : 'hover:bg-gray-50'}`}
+                onClick={() => setSelectedChat(chat)}
+              >
+                <div className="bg-purple-400 rounded-full w-8 h-8 flex items-center justify-center text-md font-bold text-white mr-4">
+                  {chat.name[0]}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="font-bold truncate">{chat.name}</div>
+                  <div className="text-xs text-gray-500 truncate">{chat.lastMessage}</div>
+                </div>
+                <div className="flex flex-col items-end ml-4 min-w-[48px]">
+                  <span className="text-xs text-gray-400 mb-1">{chat.time}</span>
+                  {chat.unread > 0 && (
+                    <span className="bg-purple-600 text-white text-xs rounded-full px-2 py-0.5 font-bold shadow mt-0.5">
+                      {chat.unread}
+                    </span>
+                  )}
+                </div>
               </div>
-              <div className="flex-1 min-w-0">
-                <div className="font-bold truncate">{chat.name}</div>
-                <div className="text-xs text-gray-500 truncate">{chat.lastMessage}</div>
-              </div>
-              <div className="flex flex-col items-end ml-4 min-w-[48px]">
-                <span className="text-xs text-gray-400 mb-1">{chat.time}</span>
-                {chat.unread > 0 && (
-                  <span className="bg-purple-600 text-white text-xs rounded-full px-2 py-0.5 font-bold shadow mt-0.5">
-                    {chat.unread}
-                  </span>
-                )}
-              </div>
-            </div>
+            </FadeContent>
           ))}
         </div>
         {/* Create Chat Modal */}
@@ -303,11 +305,11 @@ const Chats: React.FC = () => {
             </div>
           </div>
         )}
-      </div>
+      </FadeContent>
 
       {/* Chat Window */}
-      <div className="flex-1 flex flex-col bg-[#fcfbff] h-full min-h-0 relative">
-        <div className="flex items-center p-6 border-b border-gray-200 cursor-pointer select-none" onClick={() => setShowMembersModal(true)}>
+      <FadeContent className="flex-1 flex flex-col bg-[#fcfbff] h-full min-h-0 relative" delay={200}>
+        <FadeContent className="flex items-center p-6 border-b border-gray-200 cursor-pointer select-none" onClick={() => setShowMembersModal(true)}>
           <div className="bg-purple-400 rounded-full w-10 h-10 flex items-center justify-center text-lg font-bold text-white mr-4">
             {selectedChat.name[0]}
           </div>
@@ -334,7 +336,7 @@ const Chats: React.FC = () => {
               </div>
             )}
           </div>
-        </div>
+        </FadeContent>
         {/* Members Modal */}
         {showMembersModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
@@ -462,12 +464,14 @@ const Chats: React.FC = () => {
         <div className="flex-1 flex flex-col items-center justify-end overflow-y-auto min-h-0">
           <div className="w-full max-w-2xl flex flex-col gap-6 px-6 py-8 mx-auto min-h-[450px]"> {/* You can modify the min height of the chat area here */}
             {selectedChat.messages.length === 0 ? (
-              <div className="text-gray-400 text-center mt-10">No messages yet.</div>
+              <FadeContent className="text-gray-400 text-center mt-10" delay={300}>No messages yet.</FadeContent>
             ) : (
               selectedChat.messages.map((msg: Message, idx: number) => (
-                <div
+                <FadeContent 
                   key={idx}
                   className={`flex ${msg.sender === "You" ? "justify-end" : "justify-start"}`}
+                  delay={300 + idx * 50}
+                  duration={600}
                 >
                   <div
                     className={`rounded-2xl px-5 py-3 max-w-[70%] text-sm shadow-md border ${
@@ -483,7 +487,7 @@ const Chats: React.FC = () => {
                     )}
                     {msg.text}
                   </div>
-                </div>
+                </FadeContent>
               ))
             )}
             {/* Scroll anchor */}
@@ -491,54 +495,59 @@ const Chats: React.FC = () => {
           </div>
         </div>
         {/* Message Input - Edge-to-Edge, WhatsApp style */}
-        <form
+        <FadeContent 
           className="flex items-center gap-2 p-4 border-t border-gray-200 bg-white sticky bottom-0 left-0 right-0 z-10 w-full"
-          style={{boxShadow: '0 -2px 16px 0 rgba(80,0,120,0.06)'}} 
-          onSubmit={(e: FormEvent<HTMLFormElement>) => {
-            e.preventDefault();
-            if (message.trim()) {
-              setSelectedChat((prev: Chat) => ({
-                ...prev,
-                messages: [
-                  ...prev.messages,
-                  { sender: "You", text: message, time: "Now" },
-                ],
-              }));
-              setMessage("");
-            }
-          }}
+          style={{boxShadow: '0 -2px 16px 0 rgba(80,0,120,0.06)'}}
+          delay={400}
         >
-          {/* Attachment Button */}
-          <button type="button" className="p-2 rounded-full hover:bg-gray-100 text-gray-500 flex-shrink-0">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-6 h-6">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M15.172 7l-6.586 6.586a2 2 0 002.828 2.828l7.07-7.07a4 4 0 00-5.657-5.657l-7.071 7.07a6 6 0 008.485 8.486l6.364-6.364" />
-            </svg>
-          </button>
-          {/* Emoji Button */}
-          <button type="button" className="p-2 rounded-full hover:bg-gray-100 text-gray-500 flex-shrink-0">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-6 h-6">
-              <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" />
-              <circle cx="9" cy="10" r="1" fill="currentColor" />
-              <circle cx="15" cy="10" r="1" fill="currentColor" />
-              <path strokeLinecap="round" strokeLinejoin="round" d="M8 15s1.5 2 4 2 4-2 4-2" />
-            </svg>
-          </button>
-          <input
-            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none"
-            placeholder="Type Message Here..."
-            value={message}
-            onChange={(e: ChangeEvent<HTMLInputElement>) => setMessage(e.target.value)}
-          />
-          <button
-            type="submit"
-            className="ml-2 p-2 rounded-full bg-purple-600 hover:bg-purple-700 text-white flex items-center justify-center flex-shrink-0"
+          <form
+            className="flex items-center gap-2 w-full"
+            onSubmit={(e: FormEvent<HTMLFormElement>) => {
+              e.preventDefault();
+              if (message.trim()) {
+                setSelectedChat((prev: Chat) => ({
+                  ...prev,
+                  messages: [
+                    ...prev.messages,
+                    { sender: "You", text: message, time: "Now" },
+                  ],
+                }));
+                setMessage("");
+              }
+            }}
           >
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-6 h-6">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 19.5l15-7.5-15-7.5v6.75L16.5 12l-12 1.5v6.75z" />
-            </svg>
-          </button>
-        </form>
-      </div>
+            {/* Attachment Button */}
+            <button type="button" className="p-2 rounded-full hover:bg-gray-100 text-gray-500 flex-shrink-0">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-6 h-6">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15.172 7l-6.586 6.586a2 2 0 002.828 2.828l7.07-7.07a4 4 0 00-5.657-5.657l-7.071 7.07a6 6 0 008.485 8.486l6.364-6.364" />
+              </svg>
+            </button>
+            {/* Emoji Button */}
+            <button type="button" className="p-2 rounded-full hover:bg-gray-100 text-gray-500 flex-shrink-0">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-6 h-6">
+                <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" />
+                <circle cx="9" cy="10" r="1" fill="currentColor" />
+                <circle cx="15" cy="10" r="1" fill="currentColor" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M8 15s1.5 2 4 2 4-2 4-2" />
+              </svg>
+            </button>
+            <input
+              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none"
+              placeholder="Type Message Here..."
+              value={message}
+              onChange={(e: ChangeEvent<HTMLInputElement>) => setMessage(e.target.value)}
+            />
+            <button
+              type="submit"
+              className="ml-2 p-2 rounded-full bg-purple-600 hover:bg-purple-700 text-white flex items-center justify-center flex-shrink-0"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-6 h-6">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 19.5l15-7.5-15-7.5v6.75L16.5 12l-12 1.5v6.75z" />
+              </svg>
+            </button>
+          </form>
+        </FadeContent>
+      </FadeContent>
     </div>
   );
 };
