@@ -87,6 +87,7 @@ const Chats: React.FC = () => {
   const [memberInput, setMemberInput] = useState("");
   const [memberSuggestion, setMemberSuggestion] = useState<string | null>(null);
   const [chats, setChats] = useState<Chat[]>(dummyChats);
+  const [chatType, setChatType] = useState<'group' | 'private'>('group'); // NEW: Chat type state
 
   const handleAddMember = () => {
     const trimmed = memberInput.trim();
@@ -103,21 +104,39 @@ const Chats: React.FC = () => {
   };
 
   const handleCreateChat = () => {
-    if (!newChatName.trim() || newChatMembers.length === 0) return;
-    const creator = "You"; // In real app, this would be the logged-in user
-    const newChat: Chat = {
-      id: Date.now(),
-      name: newChatName,
-      lastMessage: "",
-      time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
-      unread: 0,
-      messages: [],
-      members: [creator, ...newChatMembers.filter(m => m !== creator)],
-      owner: creator,
-      admins: [creator],
-    };
-    setChats([newChat, ...chats]);
-    setSelectedChat(newChat);
+    if (chatType === 'group') {
+      if (!newChatName.trim() || newChatMembers.length === 0) return;
+      const creator = "You"; // In real app, this would be the logged-in user
+      const newChat: Chat = {
+        id: Date.now(),
+        name: newChatName,
+        lastMessage: "",
+        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        unread: 0,
+        messages: [],
+        members: [creator, ...newChatMembers.filter(m => m !== creator)],
+        owner: creator,
+        admins: [creator],
+      };
+      setChats([newChat, ...chats]);
+      setSelectedChat(newChat);
+    } else if (chatType === 'private') {
+      if (newChatMembers.length !== 1) return; // Ensure only one member is selected
+      const memberName = newChatMembers[0];
+      const newChat: Chat = {
+        id: Date.now(),
+        name: memberName, // Use the member's name as the chat name
+        lastMessage: "",
+        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        unread: 0,
+        messages: [],
+        members: ["You", memberName],
+        owner: "You",
+        admins: ["You"],
+      };
+      setChats([newChat, ...chats]);
+      setSelectedChat(newChat);
+    }
     setShowCreateModal(false);
     setNewChatName("");
     setNewChatMembers([]);
@@ -146,6 +165,35 @@ const Chats: React.FC = () => {
       setAddMemberInput("");
       setAddMemberSuggestion(null);
     }
+  };
+
+  const handleRemoveMember = (member: string) => {
+    setChats(chats =>
+      chats.map(chat =>
+        chat.id === selectedChat.id
+          ? { ...chat, members: chat.members.filter(m => m !== member), admins: chat.admins.filter(a => a !== member) }
+          : chat
+      )
+    );
+    setSelectedChat(chat => ({
+      ...chat,
+      members: chat.members.filter(m => m !== member),
+      admins: chat.admins.filter(a => a !== member),
+    }));
+  };
+
+  const handleMakeAdmin = (member: string) => {
+    setChats(chats =>
+      chats.map(chat =>
+        chat.id === selectedChat.id
+          ? { ...chat, admins: [...chat.admins, member] }
+          : chat
+      )
+    );
+    setSelectedChat(chat  => ({
+      ...chat,
+      admins: [...chat.admins, member],
+    }));
   };
 
   const filteredChats = chats.filter((chat) =>
@@ -224,16 +272,40 @@ const Chats: React.FC = () => {
             <div className="bg-white rounded-xl shadow-xl p-8 min-w-[340px] relative">
               <button className="absolute top-2 right-2 text-gray-400 hover:text-gray-600 text-xl" onClick={() => setShowCreateModal(false)}>&times;</button>
               <h2 className="text-xl font-bold mb-4">Create New Chat</h2>
-              <div className="mb-3">
-                <label className="block text-sm font-semibold mb-1">Chat Name</label>
-                <input
-                  type="text"
-                  className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:outline-none"
-                  placeholder="Enter chat name..."
-                  value={newChatName}
-                  onChange={e => setNewChatName(e.target.value)}
-                />
+              {/* Chat Type Selector */}
+              <div className="mb-4">
+                <label className="block text-sm font-semibold mb-1">Chat Type</label>
+                <div className="flex gap-4">
+                  <button
+                    type="button"
+                    className={`px-4 py-2 rounded-lg font-semibold ${chatType === 'group' ? 'bg-purple-600 text-white' : 'bg-gray-200 text-gray-700'}`}
+                    onClick={() => setChatType('group')}
+                  >
+                    Group
+                  </button>
+                  <button
+                    type="button"
+                    className={`px-4 py-2 rounded-lg font-semibold ${chatType === 'private' ? 'bg-purple-600 text-white' : 'bg-gray-200 text-gray-700'}`}
+                    onClick={() => setChatType('private')}
+                  >
+                    Private
+                  </button>
+                </div>
               </div>
+              {/* Group Chat Name Input */}
+              {chatType === 'group' && (
+                <div className="mb-3">
+                  <label className="block text-sm font-semibold mb-1">Chat Name</label>
+                  <input
+                    type="text"
+                    className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:outline-none"
+                    placeholder="Enter chat name..."
+                    value={newChatName}
+                    onChange={e => setNewChatName(e.target.value)}
+                  />
+                </div>
+              )}
+              {/* Members Input */}
               <div className="mb-3">
                 <label className="block text-sm font-semibold mb-1">Members</label>
                 <div className="flex gap-2 mb-2 relative">
@@ -299,7 +371,7 @@ const Chats: React.FC = () => {
                   type="button"
                   className="px-4 py-2 rounded bg-purple-600 hover:bg-purple-700 text-white font-semibold"
                   onClick={handleCreateChat}
-                  disabled={!newChatName.trim() || newChatMembers.length === 0}
+                  disabled={(chatType === 'group' && (!newChatName.trim() || newChatMembers.length === 0)) || (chatType === 'private' && newChatMembers.length !== 1)}
                 >Create</button>
               </div>
             </div>
@@ -309,7 +381,10 @@ const Chats: React.FC = () => {
 
       {/* Chat Window */}
       <FadeContent className="flex-1 flex flex-col bg-[#fcfbff] h-full min-h-0 relative" delay={200}>
-        <FadeContent className="flex items-center p-6 border-b border-gray-200 cursor-pointer select-none" onClick={() => setShowMembersModal(true)}>
+        <div
+          className="flex items-center p-6 border-b border-gray-200 cursor-pointer select-none"
+          onClick={() => setShowMembersModal(true)} // Ensure this sets the state to true
+        >
           <div className="bg-purple-400 rounded-full w-10 h-10 flex items-center justify-center text-lg font-bold text-white mr-4">
             {selectedChat.name[0]}
           </div>
@@ -324,9 +399,9 @@ const Chats: React.FC = () => {
                     {", "}
                     <span
                       className="underline cursor-pointer hover:text-purple-600"
-                      onClick={e => {
-                        e.stopPropagation();
-                        setShowMembersModal(true);
+                      onClick={(e) => {
+                        e.stopPropagation(); // Prevent header click from closing the modal
+                        setShowMembersModal(true); // Ensure modal opens when clicking "and more"
                       }}
                     >
                       and {selectedChat.members.length - 5} more
@@ -336,12 +411,17 @@ const Chats: React.FC = () => {
               </div>
             )}
           </div>
-        </FadeContent>
+        </div>
         {/* Members Modal */}
         {showMembersModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
             <div className="bg-white rounded-xl shadow-xl p-8 min-w-[340px] relative">
-              <button className="absolute top-2 right-2 text-gray-400 hover:text-gray-600 text-xl" onClick={() => setShowMembersModal(false)}>&times;</button>
+              <button
+                className="absolute top-2 right-2 text-gray-400 hover:text-gray-600 text-xl"
+                onClick={() => setShowMembersModal(false)} // Close modal
+              >
+                &times;
+              </button>
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-xl font-bold">Group Members</h2>
                 {/* Add member button in modal */}
@@ -350,7 +430,8 @@ const Chats: React.FC = () => {
                     className="w-8 h-8 rounded-full flex items-center justify-center bg-purple-600 hover:bg-purple-700 text-white text-lg font-bold shadow ml-2"
                     title="Add member"
                     onClick={() => setShowAddMembersModal(true)}
-                  >+
+                  >
+                    +
                   </button>
                 ) : null}
               </div>
@@ -364,40 +445,34 @@ const Chats: React.FC = () => {
               </div>
               {/* Other members */}
               <div className="flex flex-col gap-1">
-                {selectedChat.members.filter(m => m !== selectedChat.owner).map(member => (
+                {selectedChat.members.filter((m) => m !== selectedChat.owner).map((member) => (
                   <div key={member} className="flex items-center gap-2">
                     <span>{member}</span>
                     {selectedChat.admins.includes(member) && (
                       <span className="bg-purple-200 text-purple-700 rounded px-2 py-0.5 text-xs">Admin</span>
                     )}
                     {/* Only owner/admin can remove, can't remove owner or yourself */}
-                    {(selectedChat.owner === "You" || selectedChat.admins.includes("You")) && member !== selectedChat.owner && member !== "You" && (
-                      <button
-                        className="ml-1 px-2 py-0.5 rounded bg-red-100 hover:bg-red-200 text-red-700 text-xs font-semibold"
-                        onClick={() => {
-                          setChats(chats => chats.map(chat =>
-                            chat.id === selectedChat.id
-                              ? { ...chat, members: chat.members.filter(m => m !== member), admins: chat.admins.filter(a => a !== member) }
-                              : chat
-                          ));
-                          setSelectedChat(chat => ({ ...chat, members: chat.members.filter(m => m !== member), admins: chat.admins.filter(a => a !== member) }));
-                        }}
-                      >Remove</button>
-                    )}
+                    {(selectedChat.owner === "You" || selectedChat.admins.includes("You")) &&
+                      member !== selectedChat.owner &&
+                      member !== "You" && (
+                        <button
+                          className="ml-1 px-2 py-0.5 rounded bg-red-100 hover:bg-red-200 text-red-700 text-xs font-semibold"
+                          onClick={() => handleRemoveMember(member)}
+                        >
+                          Remove
+                        </button>
+                      )}
                     {/* Only owner can make admin, can't make owner admin again */}
-                    {selectedChat.owner === "You" && !selectedChat.admins.includes(member) && member !== selectedChat.owner && (
-                      <button
-                        className="ml-1 px-2 py-0.5 rounded bg-blue-100 hover:bg-blue-200 text-blue-700 text-xs font-semibold"
-                        onClick={() => {
-                          setChats(chats => chats.map(chat =>
-                            chat.id === selectedChat.id
-                              ? { ...chat, admins: [...chat.admins, member] }
-                              : chat
-                          ));
-                          setSelectedChat(chat => ({ ...chat, admins: [...chat.admins, member] }));
-                        }}
-                      >Make Admin</button>
-                    )}
+                    {selectedChat.owner === "You" &&
+                      !selectedChat.admins.includes(member) &&
+                      member !== selectedChat.owner && (
+                        <button
+                          className="ml-1 px-2 py-0.5 rounded bg-blue-100 hover:bg-blue-200 text-blue-700 text-xs font-semibold"
+                          onClick={() => handleMakeAdmin(member)}
+                        >
+                          Make Admin
+                        </button>
+                      )}
                   </div>
                 ))}
               </div>
