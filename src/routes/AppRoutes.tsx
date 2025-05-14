@@ -12,6 +12,7 @@ import MainPage from '../components/MainAppPages/MainPage';
 import MainAppPageLayout from '../layouts/MainAppPageLayout';
 import Lists from '../components/MainAppPages/Lists';
 import Chats from '../components/MainAppPages/Chats';
+import ListDetails from '../components/MainAppPages/ListDetails';
 import { TitleProvider } from '../context/TitleContext';
 
 const AppRoutes = () => (
@@ -42,6 +43,13 @@ const AppRoutes = () => (
         <TitleProvider>
           <MainAppPageLayout>
             <Lists />
+          </MainAppPageLayout>
+        </TitleProvider>
+      } />
+      <Route path="/app/lists/:listName" element={
+        <TitleProvider>
+          <MainAppPageLayout>
+            <ListDetails />
           </MainAppPageLayout>
         </TitleProvider>
       } />

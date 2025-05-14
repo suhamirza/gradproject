@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { FaLock, FaLockOpen, FaPlus, FaTrash, FaPencilAlt } from 'react-icons/fa';
+import { useNavigate } from 'react-router-dom'; // Ensure navigate is imported
 import FadeContent from '../../components/ReactBits/FadeContent';
 
 // Mock workspace members for dropdown
@@ -32,7 +33,7 @@ const PRESET_TAGS: ListTag[] = [
 
 const defaultList = {
   id: 1,
-  title: 'Title..',
+  title: 'General',
   description: 'describe your list...',
   visibility: 'private', // or 'public'
   members: [...MOCK_MEMBERS], // All dummy members by default
@@ -40,6 +41,7 @@ const defaultList = {
 };
 
 const Lists: React.FC = () => {
+  const navigate = useNavigate(); // Initialize navigate
   const [lists, setLists] = useState([defaultList]);
   const [showModal, setShowModal] = useState(false);
   const [newListTitle, setNewListTitle] = useState('');
@@ -135,7 +137,7 @@ const Lists: React.FC = () => {
           <FadeContent key={list.id} duration={900} delay={100}>
             <div
               className="relative bg-white border-2 border-[#5C346E] rounded-2xl p-6 min-h-[320px] flex flex-col justify-between shadow hover:shadow-lg transition cursor-pointer"
-              // onClick={() => navigate(`/app/lists/${list.id}`)}
+              onClick={() => navigate(`/app/lists/${list.id}`)} // Use navigate with the list id
             >
               {/* Title (editable) */}
               <input

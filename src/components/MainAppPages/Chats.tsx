@@ -213,6 +213,15 @@ const Chats: React.FC = () => {
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
+  const handleChatClick = (chat: Chat) => {
+    setChats((prevChats) =>
+      prevChats.map((c) =>
+        c.id === chat.id ? { ...c, unread: 0 } : c // Reset unread count for the clicked chat
+      )
+    );
+    setSelectedChat(chat);
+  };
+
   // Scroll to bottom when messages change
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -226,26 +235,48 @@ const Chats: React.FC = () => {
         <div className="flex items-center justify-between px-6 py-6 pb-4">
           <h2 className="text-2xl font-bold">Chats</h2>
           <button
-            className="w-10 h-10 rounded-full flex items-center justify-center bg-purple-600 hover:bg-purple-700 text-white text-1xl shadow transition font-bold"
+            className="w-10 h-10 rounded-full flex items-center justify-center bg-purple-600 hover:bg-purple-700 text-white shadow transition"
             title="New Chat"
             onClick={() => setShowCreateModal(true)}
           >
-            +
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              strokeWidth={2}
+              stroke="currentColor"
+              className="w-6 h-6"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+            </svg>
           </button>
         </div>
-        <input
-          type="text"
-          placeholder="Search..."
-          className="mx-6 mb-2 px-3 py-2 rounded border border-gray-300 focus:outline-none focus:ring w-auto"
-          value={search}
-          onChange={(e: ChangeEvent<HTMLInputElement>) => setSearch(e.target.value)}
-        />
+        <div className="relative mx-6 mb-2">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+            strokeWidth={2}
+            stroke="currentColor"
+            className="w-5 h-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+          >
+            <circle cx="11" cy="11" r="7" stroke="currentColor" strokeWidth="2" /> {/* Full circle */}
+            <line x1="16" y1="16" x2="21" y2="21" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /> {/* Handle */}
+          </svg>
+          <input
+            type="text"
+            placeholder="Search..."
+            className="pl-10 px-3 py-2 rounded border border-gray-300 focus:outline-none focus:ring w-full"
+            value={search}
+            onChange={(e: ChangeEvent<HTMLInputElement>) => setSearch(e.target.value)}
+          />
+        </div>
         <div className="flex-1 overflow-y-auto">
           {filteredChats.map((chat) => (
             <FadeContent key={chat.id} delay={150} duration={800}>
               <div
                 className={`flex items-center px-6 py-3 cursor-pointer transition-colors ${selectedChat.id === chat.id ? 'bg-gray-100' : 'hover:bg-gray-50'}`}
-                onClick={() => setSelectedChat(chat)}
+                onClick={() => handleChatClick(chat)} // Use the updated click handler
               >
                 <div className="bg-purple-400 rounded-full w-8 h-8 flex items-center justify-center text-md font-bold text-white mr-4">
                   {chat.name[0]}
@@ -256,7 +287,7 @@ const Chats: React.FC = () => {
                 </div>
                 <div className="flex flex-col items-end ml-4 min-w-[48px]">
                   <span className="text-xs text-gray-400 mb-1">{chat.time}</span>
-                  {chat.unread > 0 && (
+                  {chat.unread > 0 && ( // Only show the unread badge if there are new messages
                     <span className="bg-purple-600 text-white text-xs rounded-full px-2 py-0.5 font-bold shadow mt-0.5">
                       {chat.unread}
                     </span>
@@ -314,11 +345,11 @@ const Chats: React.FC = () => {
                     className="flex-1 rounded border border-gray-300 px-3 py-2 text-sm focus:outline-none"
                     placeholder="Add member name..."
                     value={memberInput}
-                    onChange={e => {
+                    onChange={(e) => {
                       setMemberInput(e.target.value);
                       setMemberSuggestion(null);
                     }}
-                    onKeyDown={e => {
+                    onKeyDown={(e) => {
                       if (e.key === 'Enter') {
                         e.preventDefault();
                         handleAddMember();
@@ -327,14 +358,17 @@ const Chats: React.FC = () => {
                       }
                     }}
                     autoComplete="off"
+                    disabled={chatType === 'private' && newChatMembers.length === 1} // Disable input if private chat already has one member
                   />
                   {/* Suggestions dropdown */}
                   {memberInput && filteredSuggestions.length > 0 && (
                     <div className="absolute left-0 top-full mt-1 w-full bg-white border border-gray-200 rounded shadow z-10">
-                      {filteredSuggestions.map(suggestion => (
+                      {filteredSuggestions.map((suggestion) => (
                         <div
                           key={suggestion}
-                          className={`px-3 py-2 text-sm cursor-pointer hover:bg-purple-100 ${memberSuggestion === suggestion ? 'bg-purple-100' : ''}`}
+                          className={`px-3 py-2 text-sm cursor-pointer hover:bg-purple-100 ${
+                            memberSuggestion === suggestion ? 'bg-purple-100' : ''
+                          }`}
                           onMouseDown={() => handleSelectSuggestion(suggestion)}
                         >
                           {suggestion}
@@ -348,15 +382,29 @@ const Chats: React.FC = () => {
                     onClick={handleAddMember}
                     disabled={
                       !WORKPLACE_MEMBERS.includes(memberInput.trim()) ||
-                      newChatMembers.includes(memberInput.trim())
+                      newChatMembers.includes(memberInput.trim()) ||
+                      (chatType === 'private' && newChatMembers.length === 1) // Prevent adding more than one member for private chat
                     }
-                  >Add</button>
+                  >
+                    Add
+                  </button>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  {newChatMembers.map(member => (
-                    <span key={member} className="bg-gray-200 rounded-2xl px-4 py-1 text-sm font-medium flex items-center gap-1">
+                  {newChatMembers.map((member) => (
+                    <span
+                      key={member}
+                      className="bg-gray-200 rounded-2xl px-4 py-1 text-sm font-medium flex items-center gap-1"
+                    >
                       {member}
-                      <button type="button" className="ml-1 text-gray-400 hover:text-gray-700" onClick={() => setNewChatMembers(newChatMembers.filter(m => m !== member))}>&times;</button>
+                      <button
+                        type="button"
+                        className="ml-1 text-gray-400 hover:text-gray-700"
+                        onClick={() =>
+                          setNewChatMembers(newChatMembers.filter((m) => m !== member))
+                        }
+                      >
+                        &times;
+                      </button>
                     </span>
                   ))}
                 </div>
@@ -544,7 +592,7 @@ const Chats: React.FC = () => {
               selectedChat.messages.map((msg: Message, idx: number) => (
                 <FadeContent 
                   key={idx}
-                  className={`flex ${msg.sender === "You" ? "justify-end" : "justify-start"}`}
+                  className={`flex ${msg.sender === "You" ? "justify-end pl-16" : "justify-start pr-16"}`} // Increased padding for alignment
                   delay={300 + idx * 50}
                   duration={600}
                 >
@@ -616,7 +664,15 @@ const Chats: React.FC = () => {
               type="submit"
               className="ml-2 p-2 rounded-full bg-purple-600 hover:bg-purple-700 text-white flex items-center justify-center flex-shrink-0"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-6 h-6">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                strokeWidth={2}
+                stroke="currentColor"
+                className="w-6 h-6"
+                style={{ transform: 'translate(1px, 1px)' }} // Adjust horizontal and vertical alignment
+              >
                 <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 19.5l15-7.5-15-7.5v6.75L16.5 12l-12 1.5v6.75z" />
               </svg>
             </button>
