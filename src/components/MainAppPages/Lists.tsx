@@ -137,13 +137,15 @@ const Lists: React.FC = () => {
           <FadeContent key={list.id} duration={900} delay={100}>
             <div
               className="relative bg-white border-2 border-[#5C346E] rounded-2xl p-6 min-h-[320px] flex flex-col justify-between shadow hover:shadow-lg transition cursor-pointer"
-              onClick={() => navigate(`/app/lists/${list.id}`)} // Use navigate with the list id
+              onClick={() => navigate(`/app/lists/${encodeURIComponent(list.title)}`)} // Use list.title and encode it
             >
               {/* Title (editable) */}
               <input
                 type="text"
                 value={list.title}
+                onClick={e => e.stopPropagation()}
                 onChange={e => {
+                  e.stopPropagation();
                   setLists(lists.map(l => l.id === list.id ? { ...l, title: e.target.value } : l));
                 }}
                 className="font-extrabold text-3xl mb-4 bg-transparent outline-none border-none w-full"
@@ -166,7 +168,10 @@ const Lists: React.FC = () => {
                     className="flex items-center px-2 h-11 ml-[-25px] bg-transparent relative z-0 hover:bg-[#f7f0ff] rounded-full border-none outline-none transition"
                     style={{ border: 'none' }}
                     title="Show all members"
-                    onClick={() => setShowMembersModal(list.id)}
+                    onClick={e => {
+                      e.stopPropagation();
+                      setShowMembersModal(list.id);
+                    }}
                   >
                     <span className="text-xl text-[#5C346E] ml-2" style={{letterSpacing: '2px'}}>...</span>
                     <span className="text-xl text-[#5C346E] font-bold">+</span>
@@ -177,7 +182,9 @@ const Lists: React.FC = () => {
               <div className="mb-3">
                 <textarea
                   value={list.description || ''}
+                  onClick={e => e.stopPropagation()}
                   onChange={e => {
+                    e.stopPropagation();
                     const updatedLists = lists.map(l => l.id === list.id ? { ...l, description: e.target.value } : l);
                     setLists(updatedLists);
                   }}
@@ -186,6 +193,7 @@ const Lists: React.FC = () => {
                   rows={2}
                   style={{ minHeight: '50px', overflow: 'hidden', resize: 'none' }}
                   onInput={e => {
+                    e.stopPropagation();
                     const target = e.target as HTMLTextAreaElement;
                     target.style.height = '36px';
                     target.style.height = target.scrollHeight + 'px';
@@ -210,7 +218,10 @@ const Lists: React.FC = () => {
               {/* Trashcan Icon for Delete */}
               <button
                 className="absolute bottom-4 right-4 text-2xl text-gray-400 hover:text-red-500 transition-colors"
-                onClick={() => setDeleteConfirm(list.id)}
+                onClick={e => {
+                  e.stopPropagation();
+                  setDeleteConfirm(list.id);
+                }}
                 title="Delete list"
               >
                 <FaTrash />
@@ -218,7 +229,10 @@ const Lists: React.FC = () => {
               {/* Edit Icon */}
               <button
                 className="absolute bottom-4 right-14 text-2xl text-gray-400 hover:text-[#5C346E] transition-colors"
-                onClick={() => openEditModal(list)}
+                onClick={e => {
+                  e.stopPropagation();
+                  openEditModal(list);
+                }}
                 title="Edit list"
               >
                 <FaPencilAlt />

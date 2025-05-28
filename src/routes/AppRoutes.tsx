@@ -50,7 +50,7 @@ const AppRoutes = () => (
         <TitleProvider>
           <MainAppPageLayout>
             <ListDetails />
-          </MainAppPageLayout>
+          </MainAppPageLayout>__
         </TitleProvider>
       } />
       <Route path="/app/chats" element={
