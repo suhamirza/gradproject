@@ -13,6 +13,7 @@ import MainAppPageLayout from '../layouts/MainAppPageLayout';
 import Lists from '../components/MainAppPages/Lists';
 import Chats from '../components/MainAppPages/Chats';
 import ListDetails from '../components/MainAppPages/ListDetails';
+import NotificationsPage from '../components/MainAppPages/NotificationsPage';
 import { TitleProvider } from '../context/TitleContext';
 
 const AppRoutes = () => (
@@ -58,6 +59,11 @@ const AppRoutes = () => (
           <MainAppPageLayout>
             <Chats />
           </MainAppPageLayout>
+        </TitleProvider>
+      } />
+      <Route path="/app/notifications" element={
+        <TitleProvider>
+          <NotificationsPage />
         </TitleProvider>
       } />
     </Route>
