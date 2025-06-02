@@ -21,8 +21,20 @@ export interface AuthResponse {
   data?: {
     token: string;
     refreshToken: string;
+    verificationCode?: string;
+    expiration: string;
     user: User;
   };
+}
+
+export interface VerifyEmailRequest {
+  userId: string;
+  verificationCode: string;
+}
+
+export interface VerifyEmailResponse {
+  success: boolean;
+  message: string;
 }
 
 export interface User {

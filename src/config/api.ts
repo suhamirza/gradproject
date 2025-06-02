@@ -7,14 +7,14 @@ export const API_CONFIG = {
     CHAT_SERVICE: 'http://localhost:3003/api',
     NOTIFICATION_SERVICE: 'http://localhost:3002/api'
   },
-  ENDPOINTS: {
-    // User Service Authentication Endpoints
+  ENDPOINTS: {    // User Service Authentication Endpoints
     AUTH: {
       LOGIN: '/auth/login',
       REGISTER: '/auth/register',
-      VERIFY: '/auth/verify',
+      VERIFY: '/auth/verify-email',
       REFRESH: '/auth/refresh-token',
-      LOGOUT: '/auth/logout'
+      LOGOUT: '/auth/logout',
+      RESEND_VERIFICATION: '/auth/resend-verification-code'
     },
     // Task Service Endpoints  
     TASKS: {

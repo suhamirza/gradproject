@@ -84,17 +84,26 @@ const SignUp = () => {
         password: formData.password
       };
 
-      console.log('🚀 Submitting signup request:', signUpData);
-
-      const response = await authService.signUp(signUpData);
-
-      if (response.success) {
-        setSuccess('Account created successfully! Redirecting...');
+      console.log('🚀 Submitting signup request:', signUpData);      const response = await authService.signUp(signUpData);      if (response.success) {
+        setSuccess('Account created successfully! Redirecting to verification...');
         
-        // Redirect to verification page or main app after a delay
+        // Store user data and verification code for the verification page
+        const userData = {
+          userId: response.data?.user?.id,
+          email: formData.email,
+          verificationCode: response.data?.verificationCode
+        };
+        
+        console.log('📦 Storing user data for verification:', userData);
+        
+        // Store in sessionStorage for the verification page
+        sessionStorage.setItem('pendingVerification', JSON.stringify(userData));
+        
+        // Redirect to verification page after a short delay
         setTimeout(() => {
-          navigate('/verification'); // or '/app' if no verification needed
-        }, 2000);
+          console.log('🔄 Redirecting to verification page...');
+          navigate('/verification');
+        }, 1000); // Reduced delay to 1 second
       } else {
         setError(response.message || 'Registration failed. Please try again.');
       }
@@ -118,9 +127,27 @@ const SignUp = () => {
             delay={20}
             textAlign="center"
             className="text-4xl font-bold text-white mb-12 text-center tracking-widest leading-[1.2] mr-2"
-          />
-        </div>
+          />        </div>
       </FadeContent>
+
+      {/* Error Message */}
+      {error && (
+        <FadeContent duration={300}>
+          <div className="mb-4 p-3 bg-red-500/20 border border-red-500/50 rounded-lg text-red-300 text-sm text-center max-w-md mx-auto">
+            {error}
+          </div>
+        </FadeContent>
+      )}
+
+      {/* Success Message */}
+      {success && (
+        <FadeContent duration={300}>
+          <div className="mb-4 p-3 bg-green-500/20 border border-green-500/50 rounded-lg text-green-300 text-sm text-center max-w-md mx-auto">
+            {success}
+          </div>
+        </FadeContent>
+      )}
+
       <form className="flex flex-col gap-5" autoComplete="off" onSubmit={handleSubmit}>
         {/* First Name & Last Name Row */}
         <div className="flex gap-3">
@@ -320,14 +347,13 @@ const SignUp = () => {
               ALREADY HAVE AN ACCOUNT? <a href="/signin" className="text-violet-400 hover:text-violet-600 transition">SIGN IN</a>
             </span>
           </FadeContent>
-        </div>
-
-        {/* Sign Up Button */}
+        </div>        {/* Sign Up Button */}
         <button
           type="submit"
-          className="mt-2 bg-violet-600 hover:bg-violet-700 text-white font-bold py-2 rounded-lg shadow transition"
+          disabled={isLoading}
+          className="mt-2 bg-violet-600 hover:bg-violet-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-bold py-2 rounded-lg shadow transition"
         >
-          SIGN UP
+          {isLoading ? 'CREATING ACCOUNT...' : 'SIGN UP'}
         </button>
 
         {/* OR Divider */}
