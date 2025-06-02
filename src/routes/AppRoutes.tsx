@@ -1,6 +1,6 @@
-import React from 'react';
 import { Routes, Route } from 'react-router-dom';
 import SignIn from '../components/Auth/SignIn';
+import SignUp from '../components/Auth/SignUp';
 import LandingLayout from '../layouts/LandingLayout';
 import AuthLayout from '../layouts/AuthLayout';
 import AppLayout from '../layouts/AppLayout';
@@ -22,12 +22,13 @@ const AppRoutes = () => (
     <Route element={<LandingLayout />}>
       <Route path="/" element={<HeroSection />} />
     </Route>
+    
     {/* Auth Layout */}
     <Route element={<AuthLayout />}>
       <Route path="/signin" element={<SignIn />} />
+      <Route path="/signup" element={<SignUp />} />
       <Route path="/verify" element={<VerificationCode />} />
       <Route path="/welcome" element={<AuthWelcome />} />
-      {/* Future: <Route path="/signup" element={<SignUp />} /> */}
     </Route>
     {/* Main App Layout (for after login) */}
     <Route element={<AppLayout />}>
@@ -44,14 +45,14 @@ const AppRoutes = () => (
         <TitleProvider>
           <MainAppPageLayout>
             <Lists />
-          </MainAppPageLayout>
-        </TitleProvider>
+          </MainAppPageLayout>        </TitleProvider>
       } />
+      
       <Route path="/app/lists/:listName" element={
         <TitleProvider>
           <MainAppPageLayout>
             <ListDetails />
-          </MainAppPageLayout>__
+          </MainAppPageLayout>
         </TitleProvider>
       } />
       <Route path="/app/chats" element={
