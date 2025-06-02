@@ -1,14 +1,8 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import FadeContent from "../ReactBits/FadeContent";
 import SplitText from '../ReactBits/SplitText';
 
-
-interface SignInProps {
-  id?: string;
-  className?: string;
-}
-
-const SignIn: React.FC<SignInProps> = ({ id, className }) => {
+const SignIn = () => {
   const [showPassword, setShowPassword] = useState(false);
 
   return (
@@ -75,10 +69,9 @@ const SignIn: React.FC<SignInProps> = ({ id, className }) => {
             </button>
           </div>
           </FadeContent>
-        </div>
-        <div className="flex flex-col gap-1">
+        </div>        <div className="flex flex-col gap-1">
           <FadeContent duration={900} delay={200}>
-          <span className="text-xs font-bold text-white tracking-widest">DON'T HAVE AN ACCOUNT? <a href="#" className="text-violet-400 hover:text-violet-600 transition">SIGN UP</a></span>
+          <span className="text-xs font-bold text-white tracking-widest">DON'T HAVE AN ACCOUNT? <a href="/signup" className="text-violet-400 hover:text-violet-600 transition">SIGN UP</a></span>
           </FadeContent>
         </div>
         <button

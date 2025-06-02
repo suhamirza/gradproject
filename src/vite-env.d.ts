@@ -9,7 +9,13 @@ declare module 'react/jsx-runtime' {
 }
 
 declare module 'react' {
-  export * from 'react';
+  export function useState<T>(initialState: T | (() => T)): [T, (value: T | ((prevState: T) => T)) => void];
+  export function useEffect(effect: () => void | (() => void), deps?: any[]): void;
+  export function useRef<T>(initialValue: T): { current: T };
+  export function useContext<T>(context: any): T;
+  export function createContext<T>(defaultValue: T): any;
+  export const Fragment: any;
+  
   const React: any;
   export default React;
 }
