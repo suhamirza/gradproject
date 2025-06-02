@@ -167,9 +167,7 @@ const VerificationCode: React.FC = () => {
             {error}
           </div>
         </FadeContent>
-      )}
-
-      {/* Success Message */}
+      )}      {/* Success Message */}
       {success && (
         <FadeContent duration={300}>
           <div className="mb-4 p-3 bg-green-500/20 border border-green-500/50 rounded-lg text-green-300 text-sm text-center max-w-md">
@@ -178,25 +176,26 @@ const VerificationCode: React.FC = () => {
         </FadeContent>
       )}
 
-      <form className="flex flex-col items-center w-full gap-6" onSubmit={(e: React.FormEvent) => { e.preventDefault(); handleSubmit(); }}>
-        <div className="flex gap-3 mb-2">
+      <form className="flex flex-col items-center w-full gap-6" onSubmit={(e: React.FormEvent) => { e.preventDefault(); handleSubmit(); }}>        <div className="flex gap-2 mb-2 justify-center items-center" style={{ minWidth: '350px' }}>
           <FadeContent duration={900} delay={200}>
-            {code.map((digit: string, idx: number): React.ReactNode => (
-              <input
-                key={idx}
-                ref={(el: HTMLInputElement | null) => (inputsRef.current[idx] = el)}
-                type="text"
-                inputMode="numeric"
-                maxLength={1}
-                value={digit}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleChange(e.target.value, idx)}
-                onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => handleKeyDown(e, idx)}
-                className="w-16 h-16 text-3xl text-center rounded-md border border-white/30 bg-transparent text-white focus:outline-none focus:ring-2 focus:ring-violet-400 transition disabled:opacity-50"
-                style={{ letterSpacing: "2px" }}
-                autoFocus={idx === 0}
-                disabled={isLoading}
-              />
-            ))}
+            <div className="flex gap-2 flex-nowrap">
+              {code.map((digit: string, idx: number): React.ReactNode => (
+                <input
+                  key={idx}
+                  ref={(el: HTMLInputElement | null) => (inputsRef.current[idx] = el)}
+                  type="text"
+                  inputMode="numeric"
+                  maxLength={1}
+                  value={digit}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleChange(e.target.value, idx)}
+                  onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => handleKeyDown(e, idx)}
+                  className="w-14 h-14 text-2xl text-center rounded-md border border-white/30 bg-transparent text-white focus:outline-none focus:ring-2 focus:ring-violet-400 transition disabled:opacity-50"
+                  style={{ letterSpacing: "2px" }}
+                  autoFocus={idx === 0}
+                  disabled={isLoading}
+                />
+              ))}
+            </div>
           </FadeContent>
         </div>
 
