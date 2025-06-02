@@ -21,12 +21,11 @@ const AppRoutes = () => (
     {/* Landing Page Layout */}
     <Route element={<LandingLayout />}>
       <Route path="/" element={<HeroSection />} />
-    </Route>
-    
-    {/* Auth Layout */}
+    </Route>    {/* Auth Layout */}
     <Route element={<AuthLayout />}>
       <Route path="/signin" element={<SignIn />} />
       <Route path="/signup" element={<SignUp />} />
+      <Route path="/verification" element={<VerificationCode />} />
       <Route path="/verify" element={<VerificationCode />} />
       <Route path="/welcome" element={<AuthWelcome />} />
     </Route>

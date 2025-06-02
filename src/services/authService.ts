@@ -5,12 +5,11 @@ import type {
   SignInRequest, 
   AuthResponse, 
   User,
-  ApiResponse 
+  VerifyEmailResponse
 } from '../types/api';
 
 class AuthService {
-  
-  /**
+    /**
    * Register a new user
    */
   async signUp(userData: SignUpRequest): Promise<AuthResponse> {
@@ -20,7 +19,8 @@ class AuthService {
         username: userData.username 
       });
 
-      const response = await apiCall<AuthResponse['data']>(
+      // The backend returns AuthResponse directly, not wrapped in ApiResponse
+      const response = await apiCall<any>(
         apiClients.userService,
         'POST',
         API_CONFIG.ENDPOINTS.AUTH.REGISTER,
@@ -29,18 +29,27 @@ class AuthService {
 
       console.log('✅ Registration successful:', response);
 
+      // The response IS the AuthResponse directly
+      const authData = response.data || response; // Handle both wrapped and direct response
+
       // If registration successful and tokens provided, store them
-      if (response.success && response.data?.token) {
-        tokenManager.setToken(response.data.token);
-        if (response.data.refreshToken) {
-          tokenManager.setRefreshToken(response.data.refreshToken);
+      if (authData?.token) {
+        tokenManager.setToken(authData.token);
+        if (authData.refreshToken) {
+          tokenManager.setRefreshToken(authData.refreshToken);
         }
       }
 
       return {
-        success: response.success,
-        message: response.message || 'Registration successful!',
-        data: response.data
+        success: true,
+        message: 'Registration successful!',
+        data: {
+          token: authData.token,
+          refreshToken: authData.refreshToken,
+          verificationCode: authData.verificationCode,
+          expiration: authData.expiration,
+          user: authData.user
+        }
       };
 
     } catch (error: any) {
@@ -53,7 +62,6 @@ class AuthService {
       };
     }
   }
-
   /**
    * Sign in existing user
    */
@@ -61,7 +69,8 @@ class AuthService {
     try {
       console.log('🔐 Attempting to sign in user:', credentials.email);
 
-      const response = await apiCall<AuthResponse['data']>(
+      // The backend returns AuthResponse directly, not wrapped in ApiResponse
+      const response = await apiCall<any>(
         apiClients.userService,
         'POST',
         API_CONFIG.ENDPOINTS.AUTH.LOGIN,
@@ -70,18 +79,27 @@ class AuthService {
 
       console.log('✅ Sign in successful:', response);
 
+      // The response IS the AuthResponse directly
+      const authData = response.data || response; // Handle both wrapped and direct response
+
       // Store tokens if login successful
-      if (response.success && response.data?.token) {
-        tokenManager.setToken(response.data.token);
-        if (response.data.refreshToken) {
-          tokenManager.setRefreshToken(response.data.refreshToken);
+      if (authData?.token) {
+        tokenManager.setToken(authData.token);
+        if (authData.refreshToken) {
+          tokenManager.setRefreshToken(authData.refreshToken);
         }
       }
 
       return {
-        success: response.success,
-        message: response.message || 'Sign in successful!',
-        data: response.data
+        success: true,
+        message: 'Sign in successful!',
+        data: {
+          token: authData.token,
+          refreshToken: authData.refreshToken,
+          verificationCode: authData.verificationCode,
+          expiration: authData.expiration,
+          user: authData.user
+        }
       };
 
     } catch (error: any) {
@@ -130,7 +148,6 @@ class AuthService {
     // For now, return null - we'll implement this later
     return null;
   }
-
   /**
    * Refresh authentication token
    */
@@ -161,6 +178,71 @@ class AuthService {
       console.error('Token refresh failed:', error);
       tokenManager.clearAll();
       return false;
+    }
+  }
+
+  /**
+   * Verify email with verification code
+   */
+  async verifyEmail(userId: string, verificationCode: string): Promise<VerifyEmailResponse> {
+    try {
+      console.log('🔍 Attempting to verify email for user:', userId);
+
+      const response = await apiCall<any>(
+        apiClients.userService,
+        'POST',
+        API_CONFIG.ENDPOINTS.AUTH.VERIFY,
+        {
+          userId,
+          verificationCode
+        }
+      );
+
+      console.log('✅ Email verification successful:', response);
+
+      return {
+        success: response.success || true,
+        message: response.message || 'Email verified successfully!'
+      };
+
+    } catch (error: any) {
+      console.error('❌ Email verification failed:', error);
+      
+      return {
+        success: false,
+        message: error.message || 'Verification failed. Please check your code and try again.'
+      };
+    }
+  }
+
+  /**
+   * Resend verification code
+   */
+  async resendVerificationCode(email: string): Promise<{ success: boolean; message: string }> {
+    try {
+      console.log('📧 Resending verification code to:', email);
+
+      const response = await apiCall<any>(
+        apiClients.userService,
+        'POST',
+        API_CONFIG.ENDPOINTS.AUTH.RESEND_VERIFICATION,
+        { email }
+      );
+
+      console.log('✅ Verification code resent:', response);
+
+      return {
+        success: response.success || true,
+        message: response.message || 'Verification code sent successfully!'
+      };
+
+    } catch (error: any) {
+      console.error('❌ Failed to resend verification code:', error);
+      
+      return {
+        success: false,
+        message: error.message || 'Failed to resend verification code. Please try again.'
+      };
     }
   }
 }
