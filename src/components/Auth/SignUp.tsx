@@ -1,10 +1,18 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import FadeContent from "../ReactBits/FadeContent";
 import SplitText from '../ReactBits/SplitText';
+import { authService } from "../../services/authService";
+import type { SignUpRequest } from "../../types/api";
 
 const SignUp = () => {
+  const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string>('');
+  const [success, setSuccess] = useState<string>('');
+  
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -12,19 +20,91 @@ const SignUp = () => {
     email: '',
     password: '',
     confirmPassword: ''
-  });
-  const handleInputChange = (e: any) => {
+  });  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData((prev: typeof formData) => ({
       ...prev,
       [name]: value
     }));
+    
+    // Clear errors when user starts typing
+    if (error) setError('');
   };
 
-  const handleSubmit = (e: any) => {
+  const validateForm = (): boolean => {
+    if (!formData.firstName.trim()) {
+      setError('First name is required');
+      return false;
+    }
+    if (!formData.lastName.trim()) {
+      setError('Last name is required');
+      return false;
+    }
+    if (!formData.username.trim()) {
+      setError('Username is required');
+      return false;
+    }
+    if (!formData.email.trim()) {
+      setError('Email is required');
+      return false;
+    }
+    if (!formData.password) {
+      setError('Password is required');
+      return false;
+    }
+    if (formData.password.length < 6) {
+      setError('Password must be at least 6 characters long');
+      return false;
+    }
+    if (formData.password !== formData.confirmPassword) {
+      setError('Passwords do not match');
+      return false;
+    }
+    
+    return true;
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // TODO: Add signup logic here
-    console.log('Signup form data:', formData);
+    
+    if (!validateForm()) {
+      return;
+    }
+
+    setIsLoading(true);
+    setError('');
+    setSuccess('');
+
+    try {
+      const signUpData: SignUpRequest = {
+        firstName: formData.firstName.trim(),
+        lastName: formData.lastName.trim(),
+        username: formData.username.trim(),
+        email: formData.email.trim(),
+        password: formData.password
+      };
+
+      console.log('🚀 Submitting signup request:', signUpData);
+
+      const response = await authService.signUp(signUpData);
+
+      if (response.success) {
+        setSuccess('Account created successfully! Redirecting...');
+        
+        // Redirect to verification page or main app after a delay
+        setTimeout(() => {
+          navigate('/verification'); // or '/app' if no verification needed
+        }, 2000);
+      } else {
+        setError(response.message || 'Registration failed. Please try again.');
+      }
+
+    } catch (error: any) {
+      console.error('❌ Signup error:', error);
+      setError(error.message || 'An unexpected error occurred. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
