@@ -1,5 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
+import { FaTrash } from 'react-icons/fa';
 import FadeContent from '../ReactBits/FadeContent';
 import { authService } from '../../services/authService';
 
@@ -9,7 +10,6 @@ interface Workspace {
   description: string;
   memberCount: number;
   role: 'owner' | 'admin' | 'member';
-  isPrivate: boolean;
   createdAt: string;
   lastActivity: string;
   members: WorkspaceMember[];
@@ -32,7 +32,6 @@ const mockWorkspaces: Workspace[] = [
     description: 'My personal task management workspace',
     memberCount: 1,
     role: 'owner',
-    isPrivate: true,
     createdAt: '2024-01-15',
     lastActivity: '2024-06-05',
     members: [
@@ -51,7 +50,6 @@ const mockWorkspaces: Workspace[] = [
     description: 'Collaborative workspace for our development team',
     memberCount: 5,
     role: 'admin',
-    isPrivate: false,
     createdAt: '2024-02-20',
     lastActivity: '2024-06-04',
     members: [
@@ -84,7 +82,6 @@ const mockWorkspaces: Workspace[] = [
     description: 'Managing marketing tasks and campaigns',
     memberCount: 8,
     role: 'member',
-    isPrivate: false,
     createdAt: '2024-03-10',
     lastActivity: '2024-06-03',
     members: []
@@ -100,24 +97,22 @@ export default function Workspaces() {
     if (role === 'owner') return 'bg-purple-100 text-purple-700';
     if (role === 'admin') return 'bg-blue-100 text-blue-700';
     return 'bg-gray-100 text-gray-700';
-  };
-  const [showCreateModal, setShowCreateModal] = React.useState(false);
+  };  const [showCreateModal, setShowCreateModal] = React.useState(false);
   const [showJoinModal, setShowJoinModal] = React.useState(false);
   const [showMembersModal, setShowMembersModal] = React.useState(false);
+  const [deleteConfirm, setDeleteConfirm] = React.useState<string | null>(null);
   const [selectedWorkspace, setSelectedWorkspace] = React.useState<Workspace | null>(null);
   
   // Create workspace form state
   const [newWorkspace, setNewWorkspace] = React.useState({
     name: '',
-    description: '',
-    isPrivate: false
+    description: ''
   });
   
   // Join workspace form state
   const [joinCode, setJoinCode] = React.useState('');
 
   const currentUser = authService.getCurrentUser();
-
   // Handle create workspace
   const handleCreateWorkspace = async () => {
     if (!newWorkspace.name.trim()) return;
@@ -128,7 +123,6 @@ export default function Workspaces() {
       description: newWorkspace.description,
       memberCount: 1,
       role: 'owner',
-      isPrivate: newWorkspace.isPrivate,
       createdAt: new Date().toISOString().split('T')[0],
       lastActivity: new Date().toISOString().split('T')[0],
       members: [        {
@@ -143,7 +137,7 @@ export default function Workspaces() {
       // TODO: Implement API call to create workspace
       console.log('Creating workspace:', workspace);
       setWorkspaces((prev: Workspace[]) => [...prev, workspace]);
-      setNewWorkspace({ name: '', description: '', isPrivate: false });
+      setNewWorkspace({ name: '', description: '' });
       setShowCreateModal(false);
     } catch (error) {
       console.error('Failed to create workspace:', error);
@@ -162,6 +156,16 @@ export default function Workspaces() {
       // Refresh workspaces list
     } catch (error) {
       console.error('Failed to join workspace:', error);
+    }
+  };  // Handle delete workspace
+  const handleDeleteWorkspace = async (workspaceId: string) => {
+    try {
+      // TODO: Implement API call to delete workspace
+      console.log('Deleting workspace:', workspaceId);
+      setWorkspaces((prev: Workspace[]) => prev.filter(w => w.id !== workspaceId));
+      setDeleteConfirm(null);
+    } catch (error) {
+      console.error('Failed to delete workspace:', error);
     }
   };
 
@@ -203,10 +207,9 @@ export default function Workspaces() {
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
             </svg>
             Create New Workspace
-          </button>
-            <button
+          </button>            <button
             onClick={() => setShowJoinModal(true)}
-            className="px-6 py-3 bg-emerald-600 text-white rounded-lg font-medium hover:bg-emerald-700 transition-colors duration-200 flex items-center gap-2"
+            className="px-6 py-3 bg-white border-2 border-[#5C346E] text-[#5C346E] rounded-lg font-medium hover:bg-[#5C346E] hover:text-white transition-colors duration-200 flex items-center gap-2"
           >
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
               <path strokeLinecap="round" strokeLinejoin="round" d="M18 7.5v3m0 0v3m0-3h3m-3 0h-3m-2.25-4.125a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zM3 19.235v-.11a6.375 6.375 0 0112.75 0v.109A12.318 12.318 0 019.374 21c-2.331 0-4.512-.645-6.374-1.766z" />
@@ -218,27 +221,20 @@ export default function Workspaces() {
           {workspaces.map((workspace: Workspace) => (
             <div
               key={workspace.id}
-              className="bg-white p-6 rounded-2xl border-2 border-[#c7b3d6] shadow-sm hover:border-[#5C346E] hover:shadow-md transition-all duration-200"
-            >
-              {/* Workspace Header */}
+              className="relative bg-white p-6 rounded-2xl border-2 border-[#c7b3d6] shadow-sm hover:border-[#5C346E] hover:shadow-md transition-all duration-200"
+            >              {/* Workspace Header */}
               <div className="flex items-start justify-between mb-4">
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-2">
                     <h3 className="text-xl font-bold text-[#5C346E] truncate">
                       {workspace.name}
                     </h3>
-                    {workspace.isPrivate && (
-                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4 text-gray-500">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
-                      </svg>
-                    )}
                   </div>
                   <p className="text-gray-600 text-sm line-clamp-2">
                     {workspace.description}
                   </p>
-                </div>
-                  {/* Role Badge */}
-                <span className={`px-2 py-1 text-xs font-medium rounded-full flex-shrink-0 ml-2 ${getRoleBadgeClass(workspace.role)}`}>
+                </div>                  {/* Role Badge */}
+                <span className={`px-2 py-1 text-xs font-medium rounded-full flex-shrink-0 ${(workspace.role === 'owner' || workspace.role === 'admin') ? 'ml-1' : 'ml-2'} ${getRoleBadgeClass(workspace.role)}`}>
                   {workspace.role}
                 </span>
               </div>
@@ -255,7 +251,7 @@ export default function Workspaces() {
                   Active {formatDate(workspace.lastActivity)}
                 </div>
               </div>              {/* Action Buttons */}
-              <div className="flex gap-2">
+              <div className="flex gap-2 mb-2">
                 <button
                   onClick={() => handleViewMembers(workspace)}
                   className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors duration-200 text-sm"
@@ -264,10 +260,23 @@ export default function Workspaces() {
                 </button>
                 <button 
                   onClick={() => navigate(`/app/overview?workspace=${workspace.id}`)}
-                  className="flex-1 px-4 py-2 bg-[#5C346E] text-white rounded-lg font-medium hover:bg-[#4A2B5A] transition-colors duration-200 text-sm"
+                  className={`${(workspace.role === 'owner' || workspace.role === 'admin') ? 'flex-1' : 'flex-1'} px-4 py-2 bg-[#5C346E] text-white rounded-lg font-medium hover:bg-[#4A2B5A] transition-colors duration-200 text-sm`}
                 >
                   Open
                 </button>
+                {/* Delete Button (only for owners/admins) */}
+                {(workspace.role === 'owner' || workspace.role === 'admin') && (
+                  <button
+                    className="px-3 py-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all duration-200"
+                    onClick={(e: React.MouseEvent) => {
+                      e.stopPropagation();
+                      setDeleteConfirm(workspace.id);
+                    }}
+                    title="Delete workspace"
+                  >
+                    <FaTrash size={16} />
+                  </button>
+                )}
               </div>
             </div>
           ))}
@@ -300,9 +309,7 @@ export default function Workspaces() {
                     placeholder="Enter workspace name"
                     className="w-full px-4 py-3 border-2 border-[#c7b3d6] rounded-lg outline-none focus:border-[#5C346E] transition-all duration-200"
                   />
-                </div>
-
-                <div>
+                </div>                <div>
                   <label className="block text-sm font-medium text-[#5C346E] mb-2">
                     Description
                   </label>                  <textarea
@@ -311,18 +318,6 @@ export default function Workspaces() {
                     placeholder="Describe your workspace"
                     className="w-full px-4 py-3 border-2 border-[#c7b3d6] rounded-lg outline-none focus:border-[#5C346E] transition-all duration-200 h-20 resize-none"
                   />
-                </div>
-
-                <div className="flex items-center gap-3">                  <input
-                    type="checkbox"
-                    id="isPrivate"
-                    checked={newWorkspace.isPrivate}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewWorkspace((prev: typeof newWorkspace) => ({ ...prev, isPrivate: e.target.checked }))}
-                    className="w-4 h-4 text-[#5C346E] border-2 border-[#c7b3d6] rounded focus:ring-[#5C346E]"
-                  />
-                  <label htmlFor="isPrivate" className="text-sm text-[#5C346E] font-medium">
-                    Make this workspace private
-                  </label>
                 </div>
               </div>
 
@@ -373,9 +368,7 @@ export default function Workspaces() {
                     className="w-full px-4 py-3 border-2 border-[#c7b3d6] rounded-lg outline-none focus:border-[#5C346E] transition-all duration-200"
                   />
                 </div>
-              </div>
-
-              <div className="flex gap-3 mt-6">
+              </div>              <div className="flex gap-3 mt-6">
                 <button
                   onClick={() => setShowJoinModal(false)}
                   className="flex-1 px-6 py-3 bg-gray-500 text-white rounded-lg font-medium hover:bg-gray-600 transition-colors duration-200"
@@ -385,7 +378,7 @@ export default function Workspaces() {
                 <button
                   onClick={handleJoinWorkspace}
                   disabled={!joinCode.trim()}
-                  className="flex-1 px-6 py-3 bg-blue-500 text-white rounded-lg font-medium hover:bg-blue-600 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex-1 px-6 py-3 bg-[#5C346E] text-white rounded-lg font-medium hover:bg-[#4A2B5A] transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Join
                 </button>
@@ -437,6 +430,27 @@ export default function Workspaces() {
                   className="px-6 py-3 bg-[#5C346E] text-white rounded-lg font-medium hover:bg-[#4A2B5A] transition-colors duration-200"
                 >
                   Close
+                </button>
+              </div>            </div>
+          </div>
+        )}        {/* Delete Workspace Modal */}
+        {deleteConfirm && (
+          <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+            <div className="bg-white rounded-2xl p-8 w-full max-w-md shadow-xl border-2 border-[#5C346E] relative">
+              <h3 className="text-xl font-bold mb-6 text-[#5C346E]">Delete this workspace?</h3>
+              <p className="mb-6">Are you sure you want to delete this workspace? This action cannot be undone.</p>
+              <div className="flex justify-end gap-4">
+                <button
+                  className="px-6 py-2 rounded-xl bg-gray-200 text-gray-700 font-bold hover:bg-gray-300"
+                  onClick={() => setDeleteConfirm(null)}
+                >
+                  Cancel
+                </button>
+                <button
+                  className="px-6 py-2 rounded-xl bg-red-500 text-white font-bold hover:bg-red-600"
+                  onClick={() => handleDeleteWorkspace(deleteConfirm)}
+                >
+                  Delete
                 </button>
               </div>
             </div>
