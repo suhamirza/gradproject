@@ -1,15 +1,17 @@
 import * as React from 'react';
-import { Outlet } from 'react-router-dom';
+import { Outlet, useNavigate } from 'react-router-dom';
 import { RiSettings5Fill } from "react-icons/ri";
 import { IoAnalyticsSharp } from "react-icons/io5";
 import { GoHomeFill } from "react-icons/go";
 import Notifications from '../components/Notifications/Notifications';
 
 const AppLayout = () => {
+  const navigate = useNavigate();
+
   return (
     <div className="flex flex-col h-screen">
       {/* Navbar */}
-      <nav className="flex items-center justify-between bg-[#180620] h-20 px-8 border-b-2 border-[#d6c6dd]">
+      <nav className="flex items-center justify-between bg-[#180620] h-20 px-8 border-b-2 border-[#d6c6dd] relative z-10">
         <div className="flex text-white text-4xl font-bold items-center">
           {/* Logo */}
           TASK<span className="text-[#9759b3]">IFY.</span>
@@ -43,16 +45,19 @@ const AppLayout = () => {
               </div>
               Analytics
             </a>
-            <a href="#" className="flex items-center px-3 py-2 rounded-lg hover:bg-[#3b2355] transition text-xl font-bold">
+            <button 
+              onClick={() => navigate('/app/settings')}
+              className="flex items-center px-3 py-2 rounded-lg hover:bg-[#3b2355] transition text-xl font-bold w-full text-left"
+            >
               <div className="w-6 h-6 mr-2">
                 <RiSettings5Fill size={24} />
               </div>
               Settings
-            </a>
+            </button>
           </nav>
         </aside>
         {/* Main Content */}
-        <main className="flex-1 container-main pr-16 pt-8 pl-16">
+        <main className="flex-1 overflow-auto pr-16 pt-8 pl-16">
           <Outlet />
         </main>
       </div>
