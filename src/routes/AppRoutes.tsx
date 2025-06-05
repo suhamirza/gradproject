@@ -15,6 +15,7 @@ import Chats from '../components/MainAppPages/Chats';
 import ListDetails from '../components/MainAppPages/ListDetails';
 import NotificationsPage from '../components/MainAppPages/NotificationsPage';
 import Settings from '../components/MainAppPages/Settings';
+import Workspaces from '../components/MainAppPages/Workspaces';
 import { TitleProvider } from '../context/TitleContext';
 
 const AppRoutes = () => (
@@ -29,10 +30,14 @@ const AppRoutes = () => (
       <Route path="/verification" element={<VerificationCode />} />
       <Route path="/verify" element={<VerificationCode />} />
       <Route path="/welcome" element={<AuthWelcome />} />
-    </Route>
-    {/* Main App Layout (for after login) */}
+    </Route>    {/* Main App Layout (for after login) */}
     <Route element={<AppLayout />}>
       <Route path="/app" element={<MainPage />} />
+      <Route path="/app/workspaces" element={
+        <TitleProvider>
+          <Workspaces />
+        </TitleProvider>
+      } />
       <Route path="/app/join-workplace" element={<div>Join Workplace Coming Soon</div>} />
       <Route path="/app/overview" element={
         <TitleProvider>

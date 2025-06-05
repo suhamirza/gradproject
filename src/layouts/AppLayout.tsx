@@ -33,12 +33,15 @@ const AppLayout = () => {
           </div>
           {/* Navigation links */}
           <nav className="flex flex-col gap-3">
-            <a href="#" className="flex items-center px-3 py-2 rounded-lg hover:bg-[#3b2355] transition text-xl font-bold">
+            <button 
+              onClick={() => navigate('/app/workspaces')}
+              className="flex items-center px-3 py-2 rounded-lg hover:bg-[#3b2355] transition text-xl font-bold w-full text-left"
+            >
               <div className="w-6 h-6 mr-2">
                 <GoHomeFill size={24} />
               </div>
-              Workplaces
-            </a>
+              Workspaces
+            </button>
             <a href="#" className="flex items-center px-3 py-2 rounded-lg hover:bg-[#3b2355] transition text-xl font-bold">
               <div className="w-6 h-6 mr-2">
                 <IoAnalyticsSharp size={24} />
