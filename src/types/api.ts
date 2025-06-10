@@ -43,6 +43,7 @@ export interface User {
   lastName: string;
   username: string;
   email: string;
+  profilePictureUrl?: string;
   createdAt: string;
   updatedAt: string;
 }

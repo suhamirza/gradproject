@@ -96,8 +96,23 @@ export default function Overview() {
       projectDetailsRef.current.style.height = projectDetailsRef.current.scrollHeight + 'px';
     }
   };  return (
-    <div className="flex flex-col items-start">      {/* Project Title Display */}
-      <FadeContent>      <h2 className="font-extrabold text-[2.375rem] mb-4 mt-0">
+    <div className="flex flex-col items-start relative">
+      
+      {/* Organization ID Display - Absolute Top Right */}
+      <FadeContent>
+        <div className="absolute top-0 right-0 z-10">
+          <div className="bg-gray-50 border border-gray-200 rounded-lg px-4 py-2 text-sm text-gray-600">
+            <span className="font-semibold">Workspace ID:</span>
+            <span className="ml-2 font-mono text-gray-800 select-all">
+              {currentWorkspace?.id || 'Loading...'}
+            </span>
+          </div>
+        </div>
+      </FadeContent>
+      
+      {/* Project Title Display */}
+      <FadeContent>
+      <h2 className="font-extrabold text-[2.375rem] mb-4 mt-0">
         {title || 'Workspace Overview'}
       </h2>
       </FadeContent>
@@ -192,12 +207,11 @@ export default function Overview() {
               {memberInput || 'Add member'}
             </span>
           </div>
-        </div>
-      </div>
+        </div>      </div>
       </FadeContent>
+      
       {/* Divider */}
-      <hr className="w-full border-t-1 border-[##9CA3AF] mt-2" />
-      {/* Project Details Textarea */}
+      <hr className="w-full border-t-1 border-[##9CA3AF] mt-2" />{/* Project Details Textarea */}
       <FadeContent>
       <textarea
         ref={projectDetailsRef}

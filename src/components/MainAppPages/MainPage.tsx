@@ -66,15 +66,23 @@ const MainPage: React.FC = () => {
     setError(null);
 
     try {
-      // TODO: Implement join workspace logic
-      // For now, we'll just simulate joining and navigate to overview
-      console.log('Joining workspace with code:', joinCode);
+      console.log('Joining workspace with ID:', joinCode);
+      
+      // Call the join organization API
+      const response = await organizationService.joinOrganization(joinCode.trim());
+      
+      console.log('Successfully joined workspace:', response);
+      
+      // Reset form and close modal
       setJoinCode('');
       setShowJoinModal(false);
-      navigate('/app/overview');
+      
+      // Navigate to the joined organization in overview
+      navigate(`/app/overview?workspace=${response.organization.id}`);
+      
     } catch (error: any) {
       console.error('Failed to join workspace:', error);
-      setError(error.message ?? 'Failed to join workspace. Please check the invitation code.');
+      setError(error.message ?? 'Failed to join workspace. Please check the workspace ID.');
     } finally {
       setIsLoading(false);
     }
@@ -215,7 +223,7 @@ const MainPage: React.FC = () => {
             
             <div className="mb-6">
               <h3 className="text-2xl font-bold text-[#5C346E] mb-2">Join Workspace</h3>
-              <p className="text-gray-600">Enter the workspace invitation code</p>
+              <p className="text-gray-600">Enter the workspace ID to join an existing workspace</p>
               {error && (
                 <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg">
                   <p className="text-red-600 text-sm">{error}</p>
@@ -226,16 +234,15 @@ const MainPage: React.FC = () => {
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-[#5C346E] mb-2">
-                  Invitation Code *
+                  Workspace ID *
                 </label>
                 <input
                   type="text"
                   value={joinCode}
                   onChange={(e: React.ChangeEvent<HTMLInputElement>) => setJoinCode(e.target.value)}
-                  placeholder="Enter invitation code"
-                  className="w-full px-4 py-3 border-2 border-[#c7b3d6] rounded-lg outline-none focus:border-[#5C346E] transition-all duration-200"
-                />
-              </div>
+                  placeholder="Enter workspace ID"
+                  className="w-full px-4 py-3 border-2 border-[#c7b3d6] rounded-lg outline-none focus:border-[#5C346E] transition-all duration-200 font-mono"
+                /></div>
             </div>
 
             <div className="flex gap-3 mt-6">

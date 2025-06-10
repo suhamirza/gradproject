@@ -4,6 +4,7 @@ import { IoAnalyticsSharp } from "react-icons/io5";
 import { GoHomeFill } from "react-icons/go";
 import { useUser } from '../context/UserContext';
 import Notifications from '../components/Notifications/Notifications';
+import ProfilePicture from '../components/UI/ProfilePicture';
 
 const AppLayout = () => {
   const navigate = useNavigate();
@@ -39,9 +40,15 @@ const AppLayout = () => {
         {/* Sidebar */}
         <aside className="bg-[#25113a] w-56 flex flex-col py-8 px-4 text-white min-h-0">          {/* Profile section */}
           <div className="flex flex-col items-center mb-8">
-            <div className="bg-[#b38fff] rounded-full w-12 h-12 flex items-center justify-center text-2xl mb-2">
-              <span role="img" aria-label="avatar">👤</span>
-            </div>
+            <ProfilePicture
+              firstName={user?.firstName}
+              lastName={user?.lastName}
+              username={user?.username}
+              profilePictureUrl={user?.profilePictureUrl}
+              size="md"
+              onClick={() => navigate('/app/settings')}
+              className="mb-2 hover:shadow-lg"
+            />
             <span className="font-extrabold bg-[#dea5f824] px-6 py-2 rounded-lg text-2xl text-center">
               {getUserDisplayName()}
             </span>

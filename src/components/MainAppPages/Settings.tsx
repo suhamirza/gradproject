@@ -1,6 +1,7 @@
 import React from 'react';
 import FadeContent from '../ReactBits/FadeContent';
 import { authService } from '../../services/authService';
+import ProfilePicture from '../UI/ProfilePicture';
 
 interface NotificationSettings {
   pushNotifications: boolean;
@@ -15,6 +16,7 @@ interface UserProfile {
   lastName: string;
   username: string;
   email: string;
+  profilePictureUrl?: string;
 }
 
 export default function Settings() {

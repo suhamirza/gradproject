@@ -109,7 +109,6 @@ export const organizationService = {  // Create a new organization
       `${API_CONFIG.ENDPOINTS.TASKS.ORGANIZATIONS}/${id}`
     );
   },
-
   // Update organization
   updateOrganization: async (
     id: string, 
@@ -120,6 +119,15 @@ export const organizationService = {  // Create a new organization
       'PUT',
       `${API_CONFIG.ENDPOINTS.TASKS.ORGANIZATIONS}/${id}`,
       data
+    );
+  },
+
+  // Join organization using workspace ID
+  joinOrganization: async (organizationId: string): Promise<{ message: string; organization: Organization; member: OrganizationMember }> => {
+    return await orgApiCall(
+      apiClients.taskService,
+      'POST',
+      `${API_CONFIG.ENDPOINTS.TASKS.ORGANIZATIONS}/${organizationId}/join`
     );
   },
 
