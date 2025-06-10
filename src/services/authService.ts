@@ -74,19 +74,19 @@ class AuthService {
         'POST',
         API_CONFIG.ENDPOINTS.AUTH.LOGIN,
         credentials
-      );
-
-      console.log('✅ Sign in successful:', response);
+      );      console.log('✅ Sign in successful - Full response:', JSON.stringify(response, null, 2));
 
       // The response IS the AuthResponse directly
       const authData = response.data || response; // Handle both wrapped and direct response
-
-      // Store tokens if login successful
+      console.log('📦 Extracted authData:', JSON.stringify(authData, null, 2));// Store tokens if login successful
       if (authData?.token) {
+        console.log('✅ Storing token in localStorage:', authData.token.substring(0, 15) + '...');
         tokenManager.setToken(authData.token);
         if (authData.refreshToken) {
           tokenManager.setRefreshToken(authData.refreshToken);
         }
+      } else {
+        console.warn('⚠️ No token received from server in authData:', authData);
       }
 
       return {
@@ -137,15 +137,79 @@ class AuthService {
   isAuthenticated(): boolean {
     const token = tokenManager.getToken();
     return !!token;
-  }
-
-  /**
+  }  /**
    * Get current user info from token (if stored)
-   */
-  getCurrentUser(): User | null {
-    // This would typically decode the JWT token
-    // For now, return null - we'll implement this later
-    return null;
+   */  getCurrentUser(): User | null {
+    try {
+      const token = tokenManager.getToken();
+      console.log('🔑 Retrieved token from storage:', token ? `${token.substring(0, 15)}...` : 'null');
+      
+      if (!token) {
+        console.warn('⚠️ No token found in storage');
+        return null;
+      }
+
+      // Decode JWT token to extract user info
+      // JWT structure: header.payload.signature
+      const tokenParts = token.split('.');
+      if (tokenParts.length !== 3) {
+        console.warn('Invalid JWT token format');
+        return null;
+      }
+      
+      // Decode the payload (base64url encoded)
+      const payload = tokenParts[1];
+      const decodedPayload = JSON.parse(atob(payload.replace(/-/g, '+').replace(/_/g, '/')));
+      
+      console.log('Decoded JWT payload:', decodedPayload);
+      console.log('All available JWT claims:', Object.keys(decodedPayload));
+
+      // Check if token is expired
+      if (decodedPayload.exp && Date.now() >= decodedPayload.exp * 1000) {
+        console.warn('JWT token has expired');
+        tokenManager.clearAll();
+        return null;
+      }
+      
+      // Extract user information from the payload
+      // First, try to find a user ID from common JWT claims
+      const userId = decodedPayload.userId || decodedPayload.id || decodedPayload.sub || decodedPayload.user_id || decodedPayload.nameid;
+      
+      if (userId) {
+        console.log('Found user ID in token:', userId);
+        
+        // Check if the user object is nested in the payload
+        const userDataField = decodedPayload.user || decodedPayload.userData || decodedPayload;
+        
+        // Prioritize unique_name from the token as the username
+        // This is the username entered during signup
+        const username = decodedPayload.unique_name || userDataField.username || userDataField.preferred_username || '';
+        console.log('Username from token (unique_name):', username);
+        
+        // If we only have the user ID in the token, return a minimal user object
+        const extractedUser = {
+          id: userId,
+          firstName: userDataField.firstName || userDataField.given_name || userDataField.name?.split(' ')[0] || '',
+          lastName: userDataField.lastName || userDataField.family_name || (userDataField.name?.split(' ').length > 1 ? userDataField.name?.split(' ')[1] : '') || '',
+          username: username,
+          email: userDataField.email || '',
+          createdAt: userDataField.createdAt || userDataField.created_at || '',
+          updatedAt: userDataField.updatedAt || userDataField.updated_at || ''
+        };
+
+        console.log('Extracted user from token:', extractedUser);
+        return extractedUser;
+      }
+      
+      console.warn('❌ No identifiable user information found in token payload');
+      console.log('Available claims:', Object.keys(decodedPayload));
+
+      return null;
+    } catch (error) {
+      console.error('Failed to decode JWT token:', error);
+      tokenManager.clearAll();
+      return null;
+    }
   }
   /**
    * Refresh authentication token

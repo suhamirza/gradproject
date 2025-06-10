@@ -3,15 +3,17 @@ import { useNavigate } from "react-router-dom";
 import FadeContent from "../ReactBits/FadeContent";
 import SplitText from '../ReactBits/SplitText';
 import { authService } from "../../services/authService";
+import { useUser } from "../../context/UserContext";
 import type { SignInRequest } from "../../types/api";
 
 const SignIn = () => {
   const navigate = useNavigate();
+  const { refreshUser } = useUser();
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string>('');
   const [success, setSuccess] = useState<string>('');
-    const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState({
     username: '',
     password: ''
   });
@@ -38,7 +40,6 @@ const SignIn = () => {
     
     return true;
   };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -53,20 +54,36 @@ const SignIn = () => {
     try {      const signInData: SignInRequest = {
         username: formData.username.trim(),
         password: formData.password
-      };
-
-      console.log('🔐 Attempting sign in...');
-      const response = await authService.signIn(signInData);
-
-      if (response.success) {
+      };      console.log('🔐 Attempting sign in...');
+      const response = await authService.signIn(signInData);      if (response.success) {
         setSuccess('Sign in successful! Redirecting...');
         
-        console.log('✅ Sign in successful, redirecting to app...');
+        console.log('✅ Sign in successful, refreshing user data...');
         
-        // Redirect to main app after a short delay
-        setTimeout(() => {
-          navigate('/app');
-        }, 1000);
+        // Check if token was stored correctly
+        const storedToken = authService.isAuthenticated();
+        console.log('🔐 Token stored successfully?', storedToken);
+        
+        if (!storedToken) {
+          console.error('❌ Authentication token storage failed');
+          setError('Authentication failed. Please try again.');
+          setIsLoading(false);
+          return;
+        }        // Refresh user data from the stored token
+        await refreshUser();
+        
+        // Verify a user was obtained
+        const user = authService.getCurrentUser();
+        if (!user) {
+          console.error('❌ Failed to get user from token');
+          setError('Failed to retrieve user profile. Please try again.');
+          setIsLoading(false);
+          return;
+        }
+        
+        // Navigate immediately to the main app
+        console.log('✅ Authentication successful! Redirecting to /app now...');
+        navigate('/app', { replace: true });
       } else {
         setError(response.message || 'Sign in failed. Please try again.');
       }
