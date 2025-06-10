@@ -103,15 +103,11 @@ export interface GetTasksResponse {
   totalPages: number;
 }
 
-export interface CreateProjectResponse {
-  message: string;
-  project: Project;
-}
+// Backend returns project directly for create, not wrapped
+export type CreateProjectResponse = Project;
 
-export interface GetProjectsResponse {
-  message: string;
-  projects: Project[];
-}
+// Backend returns array of projects directly for get, not wrapped
+export type GetProjectsResponse = Project[];
 
 // Task service functions
 export const taskService = {
@@ -135,7 +131,7 @@ export const taskService = {
     return await taskApiCall<GetProjectsResponse>(
       apiClients.taskService,
       'GET',
-      `/projects?organizationId=${organizationId}`
+      `/projects/organization/${organizationId}`
     );
   },
 
@@ -197,7 +193,6 @@ export const taskService = {
       { organizationId, userId, role }
     );
   },
-
   // Add comment to task
   addTaskComment: async (taskId: string, organizationId: string, content: string): Promise<TaskComment> => {
     return await taskApiCall<TaskComment>(
@@ -205,6 +200,15 @@ export const taskService = {
       'POST',
       `/tasks/${taskId}/comments`,
       { organizationId, content }
+    );
+  },
+  // Delete a project
+  deleteProject: async (projectId: string, organizationId: string): Promise<void> => {
+    await taskApiCall<void>(
+      apiClients.taskService,
+      'DELETE',
+      `/projects/${projectId}`,
+      { organizationId }
     );
   }
 };
