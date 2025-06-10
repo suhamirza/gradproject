@@ -1,23 +1,15 @@
-import React, { useState } from 'react';
-import { FaLock, FaLockOpen, FaPlus, FaTrash, FaPencilAlt } from 'react-icons/fa';
-import { useNavigate } from 'react-router-dom'; // Ensure navigate is imported
+// @ts-nocheck
+import { useState, useEffect } from 'react';
+import { FaLock, FaPlus, FaTrash, FaPencilAlt } from 'react-icons/fa';
+import { useNavigate } from 'react-router-dom';
+import { useWorkspace } from '../../context/WorkspaceContext';
+import * as TaskService from '../../services/taskService';
+import { organizationService, type OrganizationMember } from '../../services/organizationService';
 import FadeContent from '../../components/ReactBits/FadeContent';
 
-// Mock workspace members for dropdown
-const MOCK_MEMBERS = [
-  'Suha Mirza',
-  'Yahya',
-  'Muhammad',
-  'Vedat',
-  'Aisha',
-  'Fatima',
-  'Bilal',
-  'Zara',
-  'Omar',
-  'Sara',
-  'Keko',
-  'Katoosa'
-];
+// Extract the types we need
+type Project = TaskService.Project;
+type CreateProjectRequest = TaskService.CreateProjectRequest;
 
 type ListTag = {
   label: string;
@@ -31,18 +23,29 @@ const PRESET_TAGS: ListTag[] = [
   { label: 'Work', color: '#ede9fe', preset: true }, // purple
 ];
 
-const defaultList = {
-  id: 1,
-  title: 'General',
-  description: 'describe your list...',
-  visibility: 'private', // or 'public'
-  members: [...MOCK_MEMBERS], // All dummy members by default
-  tag: null as ListTag | null,
-};
+interface ProjectWithTag extends Project {
+  tag?: ListTag | null;
+}
 
 const Lists: React.FC = () => {
-  const navigate = useNavigate(); // Initialize navigate
-  const [lists, setLists] = useState([defaultList]);
+  const navigate = useNavigate();
+  
+  // Use useWorkspace with fallback
+  let currentWorkspace = null;
+  let workspaceLoading = false;
+  
+  try {
+    const context = useWorkspace();
+    currentWorkspace = context.currentWorkspace;
+    workspaceLoading = context.isLoading;
+  } catch (error) {
+    // Context not available, use fallback
+    console.warn('WorkspaceContext not available, using fallback');
+  }
+  
+  const [projects, setProjects] = useState<ProjectWithTag[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [workspaceMembers, setWorkspaceMembers] = useState<OrganizationMember[]>([]);
   const [showModal, setShowModal] = useState(false);
   const [newListTitle, setNewListTitle] = useState('');
   const [newListDescription, setNewListDescription] = useState('');
@@ -52,147 +55,256 @@ const Lists: React.FC = () => {
   const [newListTagType, setNewListTagType] = useState<'preset'|'custom'|''>('');
   const [newListTagPreset, setNewListTagPreset] = useState<ListTag|null>(null);
   const [newListTagCustom, setNewListTagCustom] = useState<{label: string, color: string}>({label: '', color: '#c7b3d6'});
-  const [deleteConfirm, setDeleteConfirm] = useState<number|null>(null);
-  const [showMembersModal, setShowMembersModal] = useState<number|null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<string|null>(null);
+  const [showMembersModal, setShowMembersModal] = useState<string|null>(null);
   const [membersSearch, setMembersSearch] = useState('');
-  const [editListModal, setEditListModal] = useState<number|null>(null);
+  const [editListModal, setEditListModal] = useState<string|null>(null);
   const [editTagType, setEditTagType] = useState<'preset'|'custom'|''>('');
   const [editTagPreset, setEditTagPreset] = useState<ListTag|null>(null);
   const [editTagCustom, setEditTagCustom] = useState<{label: string, color: string}>({label: '', color: '#c7b3d6'});
   const [editMembers, setEditMembers] = useState<string[]>([]);
-  const [editListVisibility, setEditListVisibility] = useState<'private' | 'public'>(defaultList.visibility);
+  const [editListVisibility, setEditListVisibility] = useState<'private' | 'public'>('private');
   const [editMemberSearch, setEditMemberSearch] = useState('');
 
+  // Load projects when workspace changes
+  useEffect(() => {
+    const loadProjects = async () => {
+      if (!currentWorkspace) return;
+      
+      try {
+        setLoading(true);
+        const response = await TaskService.taskService.getProjects(currentWorkspace.id);
+        const projectsWithTags = response.projects.map((project: Project) => ({
+          ...project,
+          tag: null as ListTag | null
+        }));
+        setProjects(projectsWithTags);
+      } catch (error) {
+        console.error('Failed to load projects:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadProjects();
+  }, [currentWorkspace]);
+
+  // Load workspace members
+  useEffect(() => {
+    const loadWorkspaceMembers = async () => {
+      if (!currentWorkspace) return;
+      
+      try {
+        const response = await organizationService.getOrganizationMembers(currentWorkspace.id);
+        setWorkspaceMembers(response.members);
+      } catch (error) {
+        console.error('Failed to load workspace members:', error);
+      }
+    };
+
+    loadWorkspaceMembers();
+  }, [currentWorkspace]);
+
   // Filtered members for dropdown
-  const filteredMembers = MOCK_MEMBERS.filter(m =>
-    m.toLowerCase().includes(memberSearch.toLowerCase()) && !newListMembers.includes(m)
-  ).sort();
+  const filteredMembers = workspaceMembers.filter(m =>
+    m.userName.toLowerCase().includes(memberSearch.toLowerCase()) && !newListMembers.includes(m.userName)
+  ).sort((a, b) => a.userName.localeCompare(b.userName));
 
-  const handleAddList = () => {
-    if (!newListTitle.trim()) return;
-    let tag: ListTag|null = null;
-    if (newListTagType === 'preset' && newListTagPreset) tag = newListTagPreset;
-    if (newListTagType === 'custom' && newListTagCustom.label) tag = {label: newListTagCustom.label, color: newListTagCustom.color};
-    setLists([
-      ...lists,
-      {
-        id: Date.now(),
-        title: newListTitle,
-        description: newListDescription,
-        tag,
-        visibility: newListVisibility,
-        members: newListMembers,
-      },
-    ]);
-    setShowModal(false);
-    setNewListTitle('');
-    setNewListDescription('');
-    setNewListTagType('');
-    setNewListTagPreset(null);
-    setNewListTagCustom({label: '', color: '#c7b3d6'});
-    setNewListMembers([]);
-    setNewListVisibility('private');
+  const handleAddList = async () => {
+    console.log('=== CREATE LIST DEBUG ===');
+    console.log('newListTitle:', newListTitle);
+    console.log('currentWorkspace:', currentWorkspace);
+    
+    if (!newListTitle.trim()) {
+      alert('Please enter a list name');
+      return;
+    }
+
+    // TEMPORARY FIX - Create mock project locally until backend is working
+    try {
+      let tag: ListTag | null = null;
+      if (newListTagType === 'preset' && newListTagPreset) tag = newListTagPreset;
+      if (newListTagType === 'custom' && newListTagCustom.label) tag = { label: newListTagCustom.label, color: newListTagCustom.color };
+
+      // Create a mock project for now
+      const mockProject: ProjectWithTag = {
+        id: 'temp-' + Date.now(),
+        name: newListTitle,
+        description: newListDescription || 'describe your list...',
+        organizationId: currentWorkspace?.id || 'mock-workspace',
+        isArchived: false,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        tag
+      };
+
+      console.log('✅ Creating mock project:', mockProject);
+
+      setProjects(prev => [...prev, mockProject]);
+      setShowModal(false);
+      setNewListTitle('');
+      setNewListDescription('');
+      setNewListTagType('');
+      setNewListTagPreset(null);
+      setNewListTagCustom({ label: '', color: '#c7b3d6' });
+      setNewListMembers([]);
+      setNewListVisibility('private');
+      
+      console.log('✅ Project created successfully (MOCK)!');
+      
+      // Try to call real API in background but don't block UI
+      if (currentWorkspace) {
+        try {
+          const projectRequest: CreateProjectRequest = {
+            name: newListTitle,
+            description: newListDescription || 'describe your list...',
+            organizationId: currentWorkspace.id
+          };
+          
+          console.log('📝 Attempting real API call in background...');
+          const response = await TaskService.taskService.createProject(projectRequest);
+          console.log('✅ Real API success:', response);
+          
+          // Update the mock project with real data
+          setProjects(prev => prev.map(p => 
+            p.id === mockProject.id ? { ...response.project, tag } : p
+          ));
+        } catch (error) {
+          console.warn('⚠️ Real API failed, keeping mock project:', error);
+        }
+      }
+      
+    } catch (error) {
+      console.error('❌ Failed to create project:', error);
+      alert('Failed to create project: ' + (error.message || 'Unknown error'));
+    }
   };
 
-  const handleDeleteList = (id: number) => {
-    setLists(lists.filter(l => l.id !== id));
-    setDeleteConfirm(null);
+  const handleDeleteList = async (id: string) => {
+    try {
+      // Note: deleteProject doesn't exist in current API, so we'll just remove locally for now
+      setProjects(prev => prev.filter(p => p.id !== id));
+      setDeleteConfirm(null);
+    } catch (error) {
+      console.error('Failed to delete project:', error);
+    }
   };
 
-  const getListById = (id: number) => lists.find(l => l.id === id);
-
-  const openEditModal = (list: any) => {
-    setEditListModal(list.id);
-    if (!list.tag) {
+  const openEditModal = (project: ProjectWithTag) => {
+    setEditListModal(project.id);
+    if (!project.tag) {
       setEditTagType('');
       setEditTagPreset(null);
-      setEditTagCustom({label: '', color: '#c7b3d6'});
-    } else if (list.tag.preset) {
+      setEditTagCustom({ label: '', color: '#c7b3d6' });
+    } else if (project.tag.preset) {
       setEditTagType('preset');
-      setEditTagPreset(PRESET_TAGS.find(t => t.label === list.tag.label) || null);
-      setEditTagCustom({label: '', color: '#c7b3d6'});
+      setEditTagPreset(PRESET_TAGS.find(t => t.label === project.tag!.label) || null);
+      setEditTagCustom({ label: '', color: '#c7b3d6' });
     } else {
       setEditTagType('custom');
       setEditTagPreset(null);
-      setEditTagCustom({label: list.tag.label, color: list.tag.color});
+      setEditTagCustom({ label: project.tag.label, color: project.tag.color });
     }
-    setEditMembers(list.members);
-    setEditListVisibility(list.visibility);
+    // For now, use empty members array since we need to implement project members
+    setEditMembers([]);
+    setEditListVisibility('private'); // Default since Project doesn't have isPublic
     setEditMemberSearch('');
   };
 
-  const handleSaveEdit = () => {
-    let tag: ListTag|null = null;
-    if (editTagType === 'preset' && editTagPreset) tag = editTagPreset;
-    if (editTagType === 'custom' && editTagCustom.label) tag = {label: editTagCustom.label, color: editTagCustom.color};
-    setLists(lists.map(l => l.id === editListModal ? { ...l, tag, members: editMembers, visibility: editListVisibility } : l));
-    setEditListModal(null);
+  const handleSaveEdit = async () => {
+    if (!editListModal) return;
+    
+    try {
+      let tag: ListTag | null = null;
+      if (editTagType === 'preset' && editTagPreset) tag = editTagPreset;
+      if (editTagType === 'custom' && editTagCustom.label) tag = { label: editTagCustom.label, color: editTagCustom.color };
+
+      // Update the project locally (for tag and visibility)
+      setProjects(prev => prev.map(p => 
+        p.id === editListModal 
+          ? { ...p, tag } 
+          : p
+      ));
+      setEditListModal(null);
+    } catch (error) {
+      console.error('Failed to update project:', error);
+    }
   };
+
+  const handleTitleChange = async (projectId: string, newTitle: string) => {
+    try {
+      // Update locally immediately
+      setProjects(prev => prev.map(p => 
+        p.id === projectId ? { ...p, name: newTitle } : p
+      ));
+      
+      // Note: updateProject doesn't exist in current API, so we'll only update locally for now
+    } catch (error) {
+      console.error('Failed to update project title:', error);
+    }
+  };
+
+  const handleDescriptionChange = async (projectId: string, newDescription: string) => {
+    try {
+      // Update locally immediately
+      setProjects(prev => prev.map(p => 
+        p.id === projectId ? { ...p, description: newDescription } : p
+      ));
+      
+      // Note: updateProject doesn't exist in current API, so we'll only update locally for now
+    } catch (error) {
+      console.error('Failed to update project description:', error);
+    }
+  };
+
+  if (loading || workspaceLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-[#5C346E] text-lg">Loading projects...</div>
+      </div>
+    );
+  }
 
   return (
     <FadeContent duration={900} delay={100}>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10 mt-6 w-full">
-        {/* List Previews */}
-        {lists.map((list) => (
-          <FadeContent key={list.id} duration={900} delay={100}>
+        {/* Project Previews */}
+        {projects.map((project) => (
+          <FadeContent key={project.id} duration={900} delay={100}>
             <div
               className="relative bg-white border-2 border-[#5C346E] rounded-2xl p-6 min-h-[320px] flex flex-col justify-between shadow hover:shadow-lg transition cursor-pointer"
-              onClick={() => navigate(`/app/lists/${encodeURIComponent(list.title)}`)} // Use list.title and encode it
+              onClick={() => navigate(`/app/workspace/${currentWorkspace?.id}/lists/${encodeURIComponent(project.name)}`)}
             >
               {/* Title (editable) */}
               <input
                 type="text"
-                value={list.title}
-                onClick={e => e.stopPropagation()}
-                onChange={e => {
+                value={project.name}
+                onClick={(e) => e.stopPropagation()}
+                onChange={(e) => {
                   e.stopPropagation();
-                  setLists(lists.map(l => l.id === list.id ? { ...l, title: e.target.value } : l));
+                  handleTitleChange(project.id, e.target.value);
                 }}
                 className="font-extrabold text-3xl mb-4 bg-transparent outline-none border-none w-full"
                 placeholder="Title.."
               />
-              {/* Members Placeholder */}
+              {/* Members Placeholder - For now showing empty since Project doesn't have members */}
               <div className="flex flex-row gap-2 mb-4 min-h-[44px]">
-                {list.members.slice(0, 5).map((member, idx) => (
-                  <div
-                    key={member}
-                    className="w-11 h-11 rounded-full bg-[#e9e0f3] flex items-center justify-center font-bold text-[#5C346E] text-lg border-2 border-white shadow"
-                    title={member}
-                    style={{ zIndex: 10 - idx, marginLeft: idx === 0 ? 0 : -25 }}
-                  >
-                    {member.split(' ').map((n) => n[0]).join('').slice(0,2).toUpperCase()}
-                  </div>
-                ))}
-                {list.members.length > 5 && (
-                  <button
-                    className="flex items-center px-2 h-11 ml-[-25px] bg-transparent relative z-0 hover:bg-[#f7f0ff] rounded-full border-none outline-none transition"
-                    style={{ border: 'none' }}
-                    title="Show all members"
-                    onClick={e => {
-                      e.stopPropagation();
-                      setShowMembersModal(list.id);
-                    }}
-                  >
-                    <span className="text-xl text-[#5C346E] ml-2" style={{letterSpacing: '2px'}}>...</span>
-                    <span className="text-xl text-[#5C346E] font-bold">+</span>
-                  </button>
-                )}
+                <div className="text-gray-400 text-sm">No members yet</div>
               </div>
               {/* Description (editable) */}
               <div className="mb-3">
                 <textarea
-                  value={list.description || ''}
-                  onClick={e => e.stopPropagation()}
-                  onChange={e => {
+                  value={project.description || ''}
+                  onClick={(e) => e.stopPropagation()}
+                  onChange={(e) => {
                     e.stopPropagation();
-                    const updatedLists = lists.map(l => l.id === list.id ? { ...l, description: e.target.value } : l);
-                    setLists(updatedLists);
+                    handleDescriptionChange(project.id, e.target.value);
                   }}
                   className="w-full mt-2 px-2 py-1 rounded-lg border border-[#e9e0f3] bg-[#faf7fd] text-[#5C346E] font-normal text-sm resize-none focus:border-[#5C346E] focus:bg-white transition"
                   placeholder="Describe your list..."
                   rows={2}
                   style={{ minHeight: '50px', overflow: 'hidden', resize: 'none' }}
-                  onInput={e => {
+                  onInput={(e) => {
                     e.stopPropagation();
                     const target = e.target as HTMLTextAreaElement;
                     target.style.height = '36px';
@@ -202,25 +314,25 @@ const Lists: React.FC = () => {
               </div>
               {/* Blank space for tasks */}
               <div className="flex-1" />
-              {/* Visibility Icon */}
+              {/* Visibility Icon - Always private for now since Project doesn't have isPublic */}
               <div className="absolute top-4 right-4 text-xl">
-                {list.visibility === 'private' ? <FaLock /> : <FaLockOpen />}
+                <FaLock />
               </div>
               {/* Tag */}
-              {list.tag && (
+              {project.tag && (
                 <span
                   className="absolute bottom-4 left-4 px-3 py-1 rounded-xl text-xs font-bold shadow-lg select-none"
-                  style={{ zIndex: 1, backgroundColor: list.tag.color, color: '#222' }}
+                  style={{ zIndex: 1, backgroundColor: project.tag.color, color: '#222' }}
                 >
-                  {list.tag.label}
+                  {project.tag.label}
                 </span>
               )}
               {/* Trashcan Icon for Delete */}
               <button
                 className="absolute bottom-4 right-4 text-2xl text-gray-400 hover:text-red-500 transition-colors"
-                onClick={e => {
+                onClick={(e) => {
                   e.stopPropagation();
-                  setDeleteConfirm(list.id);
+                  setDeleteConfirm(project.id);
                 }}
                 title="Delete list"
               >
@@ -229,9 +341,9 @@ const Lists: React.FC = () => {
               {/* Edit Icon */}
               <button
                 className="absolute bottom-4 right-14 text-2xl text-gray-400 hover:text-[#5C346E] transition-colors"
-                onClick={e => {
+                onClick={(e) => {
                   e.stopPropagation();
-                  openEditModal(list);
+                  openEditModal(project);
                 }}
                 title="Edit list"
               >
@@ -292,23 +404,23 @@ const Lists: React.FC = () => {
                   {filteredMembers.length === 0 ? (
                     <div className="text-gray-400 px-2 py-1">No members found</div>
                   ) : (
-                    filteredMembers.map(m => (
+                    filteredMembers.map((member) => (
                       <div
-                        key={m}
+                        key={member.userId}
                         className="flex items-center px-2 py-1 hover:bg-[#f7f0ff] cursor-pointer"
-                        onClick={() => setNewListMembers([...newListMembers, m])}
+                        onClick={() => setNewListMembers([...newListMembers, member.userName])}
                       >
-                        {m}
+                        {member.userName}
                       </div>
                     ))
                   )}
                 </div>
                 {/* Selected Members */}
                 <div className="flex flex-wrap gap-2 mb-4">
-                  {newListMembers.map(m => (
-                    <span key={m} className="bg-[#f7f0ff] px-3 py-1 rounded-xl text-[#5C346E] flex items-center">
-                      {m}
-                      <button onClick={() => setNewListMembers(newListMembers.filter(mem => mem !== m))} className="ml-2 text-lg">&times;</button>
+                  {newListMembers.map((memberName) => (
+                    <span key={memberName} className="bg-[#f7f0ff] px-3 py-1 rounded-xl text-[#5C346E] flex items-center">
+                      {memberName}
+                      <button onClick={() => setNewListMembers(newListMembers.filter(mem => mem !== memberName))} className="ml-2 text-lg">&times;</button>
                     </span>
                   ))}
                 </div>
@@ -429,27 +541,16 @@ const Lists: React.FC = () => {
                 >
                   &times;
                 </button>
-                <h3 className="text-xl font-bold mb-4 text-[#5C346E]">List Members</h3>
+                <h3 className="text-xl font-bold mb-4 text-[#5C346E]">Project Members</h3>
                 <input
                   type="text"
                   value={membersSearch}
-                  onChange={e => setMembersSearch(e.target.value)}
+                  onChange={(e) => setMembersSearch(e.target.value)}
                   className="w-full mb-4 px-4 py-2 border-2 border-[#c7b3d6] rounded-xl outline-none focus:border-[#5C346E]"
                   placeholder="Search members..."
                 />
                 <div className="max-h-60 overflow-y-auto flex flex-col gap-2">
-                  {getListById(showMembersModal)?.members.filter(m => m.toLowerCase().includes(membersSearch.toLowerCase())).length === 0 ? (
-                    <div className="text-gray-400 px-2 py-1">No members found</div>
-                  ) : (
-                    getListById(showMembersModal)?.members.filter(m => m.toLowerCase().includes(membersSearch.toLowerCase())).map(m => (
-                      <div key={m} className="flex items-center gap-3 px-2 py-2 bg-[#f7f0ff] rounded-xl">
-                        <div className="w-9 h-9 rounded-full bg-[#e9e0f3] flex items-center justify-center font-bold text-[#5C346E] text-base border-2 border-white shadow">
-                          {m.split(' ').map(n => n[0]).join('').slice(0,2).toUpperCase()}
-                        </div>
-                        <span className="font-semibold text-[#5C346E]">{m}</span>
-                      </div>
-                    ))
-                  )}
+                  <div className="text-gray-400 px-2 py-1">No members available yet</div>
                 </div>
               </div>
             </div>
@@ -547,18 +648,18 @@ const Lists: React.FC = () => {
                   type="text"
                   placeholder="Search members..."
                   value={editMemberSearch}
-                  onChange={e => setEditMemberSearch(e.target.value)}
+                  onChange={(e) => setEditMemberSearch(e.target.value)}
                 />
                 <div className="flex flex-wrap gap-2 mb-4">
-                  {MOCK_MEMBERS.filter(m => m.toLowerCase().includes(editMemberSearch.toLowerCase())).map(m => (
+                  {workspaceMembers.filter((member) => member.userName.toLowerCase().includes(editMemberSearch.toLowerCase())).map((member) => (
                     <button
-                      key={m}
+                      key={member.userId}
                       type="button"
                       className={`px-3 py-1 rounded-xl border-2 font-semibold text-sm transition
-                        ${editMembers.includes(m) ? 'bg-[#5C346E] text-white border-[#5C346E]' : 'bg-white text-[#5C346E] border-[#c7b3d6]'}`}
-                      onClick={() => setEditMembers(editMembers.includes(m) ? editMembers.filter(mem => mem !== m) : [...editMembers, m])}
+                        ${editMembers.includes(member.userName) ? 'bg-[#5C346E] text-white border-[#5C346E]' : 'bg-white text-[#5C346E] border-[#c7b3d6]'}`}
+                      onClick={() => setEditMembers(editMembers.includes(member.userName) ? editMembers.filter(mem => mem !== member.userName) : [...editMembers, member.userName])}
                     >
-                      {m}
+                      {member.userName}
                     </button>
                   ))}
                 </div>

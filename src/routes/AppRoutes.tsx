@@ -19,6 +19,7 @@ import Settings from '../components/MainAppPages/Settings';
 import Workspaces from '../components/MainAppPages/Workspaces';
 import { TitleProvider } from '../context/TitleContext';
 import { UserProvider } from '../context/UserContext';
+import { WorkspaceProvider } from '../context/WorkspaceContext';
 
 const AppRoutes = () => (
   <UserProvider>
@@ -45,35 +46,43 @@ const AppRoutes = () => (
             <Workspaces />
           </TitleProvider>
         } />
-        <Route path="/app/join-workplace" element={<div>Join Workplace Coming Soon</div>} />
-        <Route path="/app/overview" element={
+        <Route path="/app/join-workplace" element={<div>Join Workplace Coming Soon</div>} />        <Route path="/app/overview" element={
           <TitleProvider>
-            <MainAppPageLayout>
-              <Overview />
-            </MainAppPageLayout>
+            <WorkspaceProvider>
+              <MainAppPageLayout>
+                <Overview />
+              </MainAppPageLayout>
+            </WorkspaceProvider>
           </TitleProvider>
         } />
         <Route path="/app/lists" element={
           <TitleProvider>
-            <MainAppPageLayout>
-              <Lists />
-            </MainAppPageLayout>          </TitleProvider>
+            <WorkspaceProvider>
+              <MainAppPageLayout>
+                <Lists />
+              </MainAppPageLayout>
+            </WorkspaceProvider>
+          </TitleProvider>
         } />
         
         <Route path="/app/lists/:listName" element={
           <TitleProvider>
-            <MainAppPageLayout>
-              <ListDetails />
-            </MainAppPageLayout>
+            <WorkspaceProvider>
+              <MainAppPageLayout>
+                <ListDetails />
+              </MainAppPageLayout>
+            </WorkspaceProvider>
           </TitleProvider>
         } />
         <Route path="/app/chats" element={
           <TitleProvider>
-            <MainAppPageLayout>
-              <Chats />
-            </MainAppPageLayout>
+            <WorkspaceProvider>
+              <MainAppPageLayout>
+                <Chats />
+              </MainAppPageLayout>
+            </WorkspaceProvider>
           </TitleProvider>
-        } />        <Route path="/app/notifications" element={
+        } /><Route path="/app/notifications" element={
           <TitleProvider>
             <NotificationsPage />
           </TitleProvider>

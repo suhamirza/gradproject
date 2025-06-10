@@ -1,6 +1,7 @@
 import React, { useRef, useEffect } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { useTitle } from '../context/TitleContext';
+import { useWorkspace } from '../context/WorkspaceContext';
 import FadeContent from '../components/ReactBits/FadeContent';
 
 
@@ -16,10 +17,22 @@ const navButtons = [
 
 const MainAppPageLayout: React.FC<MainAppPageLayoutProps> = ({ children }) => {
   const { title, setTitle } = useTitle();
+  const { currentWorkspace } = useWorkspace();
+  const [searchParams] = useSearchParams();
+  const workspaceId = searchParams.get('workspace');
   const titleInputRef = useRef<HTMLInputElement>(null);
   const titleSpanRef = useRef<HTMLSpanElement>(null);
   const location = useLocation();
   const navigate = useNavigate();
+
+  // Function to navigate with workspace parameter preserved
+  const navigateWithWorkspace = (route: string) => {
+    if (workspaceId) {
+      navigate(`${route}?workspace=${workspaceId}`);
+    } else {
+      navigate(route);
+    }
+  };
 
   // Auto-grow title input width
   useEffect(() => {
@@ -67,7 +80,7 @@ const MainAppPageLayout: React.FC<MainAppPageLayoutProps> = ({ children }) => {
           <button
             key={btn.key}
             className={`px-9 py-3 rounded-xl border-2 hover:bg-[#f7f0ff] ${location.pathname.includes(btn.route) ? 'border-[#8e44ec] bg-[#f7f0ff] text-[#8e44ec] font-extrabold' : 'border-gray-300 bg-white text-gray-900 font-bold'} text-[1.375rem] transition${idx !== navButtons.length - 1 ? ' mr-4' : ''}`}
-            onClick={() => navigate(btn.route)}
+            onClick={() => navigateWithWorkspace(btn.route)}
           >
             {btn.label}
           </button>

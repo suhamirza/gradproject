@@ -1,19 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useSearchParams } from 'react-router-dom';
 import { useTitle } from '../../context/TitleContext';
+import { useWorkspace } from '../../context/WorkspaceContext';
 import FadeContent from '../../components/ReactBits/FadeContent';
-import { organizationService } from '../../services/organizationService';
 
 
 const statusOptions = ['Active', 'Completed', 'On Hold'];
 
 export default function Overview() {
-  const titleContext = useTitle() as { title: string; setTitle: (title: string) => void };
-  const [searchParams] = useSearchParams();
-  const workspaceId = searchParams.get('workspace');
-    // Organization/Workspace state
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const { title, setTitle } = useTitle();
+  const { currentWorkspace, updateWorkspace, isLoading, error } = useWorkspace();
   
   // Form state  
   const [description, setDescription] = useState('');
@@ -28,28 +23,46 @@ export default function Overview() {
   const memberSpanRef = useRef<HTMLSpanElement | null>(null);
   const projectDetailsRef = useRef<HTMLTextAreaElement | null>(null);
 
-  // Load organization data when workspaceId is available
+  // Sync workspace data with form when workspace changes
   useEffect(() => {
-    const loadOrganization = async () => {
-      if (!workspaceId) return;
-      
+    if (currentWorkspace) {
+      setTitle(currentWorkspace.name);
+      setDescription(currentWorkspace.description ?? '');
+      console.log('Syncing workspace data to form:', currentWorkspace);
+    }
+  }, [currentWorkspace, setTitle]);
+
+  // Save description changes to database with debouncing
+  useEffect(() => {
+    if (!currentWorkspace || description === (currentWorkspace.description ?? '')) return;
+    
+    const timeoutId = setTimeout(async () => {
       try {
-        setIsLoading(true);
-        setError(null);        const response = await organizationService.getOrganizationById(workspaceId);
-        if (titleContext && titleContext.setTitle) {
-          titleContext.setTitle(response.organization.name);
-        }
-        setDescription(response.organization.description ?? '');
-        console.log('Organization loaded in Overview:', response.organization);
-        console.log('Setting title to:', response.organization.name);
-      } catch (error: any) {
-        console.error('Failed to load organization:', error);
-        setError(error.message ?? 'Failed to load workspace');
-      } finally {
-        setIsLoading(false);
+        await updateWorkspace({ description });
+        console.log('Description saved to database:', description);
+      } catch (error) {
+        console.error('Failed to save description:', error);
       }
-    };    loadOrganization();
-  }, [workspaceId, titleContext]);
+    }, 1000); // 1 second debounce
+
+    return () => clearTimeout(timeoutId);
+  }, [description, currentWorkspace, updateWorkspace]);
+
+  // Save title changes to database when title context changes
+  useEffect(() => {
+    if (!currentWorkspace || title === currentWorkspace.name) return;
+    
+    const timeoutId = setTimeout(async () => {
+      try {
+        await updateWorkspace({ name: title });
+        console.log('Title saved to database:', title);
+      } catch (error) {
+        console.error('Failed to save title:', error);
+      }
+    }, 1000); // 1 second debounce
+
+    return () => clearTimeout(timeoutId);
+  }, [title, currentWorkspace, updateWorkspace]);
 
   useEffect(() => {
     if (inputRef.current && spanRef.current) {
@@ -84,9 +97,8 @@ export default function Overview() {
     }
   };  return (
     <div className="flex flex-col items-start">      {/* Project Title Display */}
-      <FadeContent>
-      <h2 className="font-extrabold text-[2.375rem] mb-4 mt-0">
-        {titleContext?.title || 'Workspace Overview'}
+      <FadeContent>      <h2 className="font-extrabold text-[2.375rem] mb-4 mt-0">
+        {title || 'Workspace Overview'}
       </h2>
       </FadeContent>
       {/* Description Input */}
