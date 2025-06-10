@@ -65,9 +65,8 @@ class AuthService {
   /**
    * Sign in existing user
    */
-  async signIn(credentials: SignInRequest): Promise<AuthResponse> {
-    try {
-      console.log('🔐 Attempting to sign in user:', credentials.email);
+  async signIn(credentials: SignInRequest): Promise<AuthResponse> {    try {
+      console.log('🔐 Attempting to sign in user:', credentials.username);
 
       // The backend returns AuthResponse directly, not wrapped in ApiResponse
       const response = await apiCall<any>(
