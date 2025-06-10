@@ -1,24 +1,55 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useTitle } from '../../context/TitleContext';
 import FadeContent from '../../components/ReactBits/FadeContent';
+import { organizationService } from '../../services/organizationService';
 
 
 const statusOptions = ['Active', 'Completed', 'On Hold'];
 
 export default function Overview() {
-  const { title } = useTitle();
+  const titleContext = useTitle() as { title: string; setTitle: (title: string) => void };
+  const [searchParams] = useSearchParams();
+  const workspaceId = searchParams.get('workspace');
+    // Organization/Workspace state
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  
+  // Form state  
   const [description, setDescription] = useState('');
   const [status, setStatus] = useState('Active');
   const [lead, setLead] = useState('');
   const [members, setMembers] = useState<string[]>([]);
   const [memberInput, setMemberInput] = useState('');
   const [projectDetails, setProjectDetails] = useState('');
+  const inputRef = useRef<HTMLInputElement | null>(null);
+  const spanRef = useRef<HTMLSpanElement | null>(null);
+  const memberInputRef = useRef<HTMLInputElement | null>(null);
+  const memberSpanRef = useRef<HTMLSpanElement | null>(null);
+  const projectDetailsRef = useRef<HTMLTextAreaElement | null>(null);
 
-  const inputRef = useRef<HTMLInputElement>(null);
-  const spanRef = useRef<HTMLSpanElement>(null);
-  const memberInputRef = useRef<HTMLInputElement>(null);
-  const memberSpanRef = useRef<HTMLSpanElement>(null);
-  const projectDetailsRef = useRef<HTMLTextAreaElement>(null);
+  // Load organization data when workspaceId is available
+  useEffect(() => {
+    const loadOrganization = async () => {
+      if (!workspaceId) return;
+      
+      try {
+        setIsLoading(true);
+        setError(null);        const response = await organizationService.getOrganizationById(workspaceId);
+        if (titleContext && titleContext.setTitle) {
+          titleContext.setTitle(response.organization.name);
+        }
+        setDescription(response.organization.description ?? '');
+        console.log('Organization loaded in Overview:', response.organization);
+        console.log('Setting title to:', response.organization.name);
+      } catch (error: any) {
+        console.error('Failed to load organization:', error);
+        setError(error.message ?? 'Failed to load workspace');
+      } finally {
+        setIsLoading(false);
+      }
+    };    loadOrganization();
+  }, [workspaceId, titleContext]);
 
   useEffect(() => {
     if (inputRef.current && spanRef.current) {
@@ -51,13 +82,12 @@ export default function Overview() {
       projectDetailsRef.current.style.height = 'auto';
       projectDetailsRef.current.style.height = projectDetailsRef.current.scrollHeight + 'px';
     }
-  };
-
-  return (
-    <div className="flex flex-col items-start">
+  };  return (
+    <div className="flex flex-col items-start">      {/* Project Title Display */}
       <FadeContent>
-      {/* Project Title Display */}
-      <h2 className="font-extrabold text-[2.375rem] mb-4 mt-0">{title || 'Title'}</h2>
+      <h2 className="font-extrabold text-[2.375rem] mb-4 mt-0">
+        {titleContext?.title || 'Workspace Overview'}
+      </h2>
       </FadeContent>
       {/* Description Input */}
       <FadeContent>
@@ -98,7 +128,7 @@ export default function Overview() {
           <input
             type="text"
             value={lead}
-            onChange={(e) => setLead(e.target.value)}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setLead(e.target.value)}
             placeholder="Team Lead"
             className="border-2 border-gray-300 text-center rounded-xl px-4 py-2 font-semibold outline-none bg-[#fafafa] text-[1.375rem] min-w-[6rem] w-auto transition-all duration-100"
             style={{ width: 'auto' }}
@@ -135,7 +165,7 @@ export default function Overview() {
             <input
               type="text"
               value={memberInput}
-              onChange={e => setMemberInput(e.target.value)}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setMemberInput(e.target.value)}
               onKeyDown={handleMemberAdd}
               placeholder="Add Member"
               className="border-2 border-gray-300 rounded-xl px-4 py-2 font-semibold outline-none bg-[#fafafa] text-[1.25rem] min-w-[11rem] w-auto transition-all duration-100 flex-shrink-0 text-center"

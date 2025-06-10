@@ -3,7 +3,7 @@ export const API_CONFIG = {
   BASE_URL: 'http://localhost',
   SERVICES: {
     USER_SERVICE: 'http://localhost:5000/api',
-    TASK_SERVICE: 'http://localhost:3001/api', 
+    TASK_SERVICE: 'http://localhost:3001', 
     CHAT_SERVICE: 'http://localhost:3003/api',
     NOTIFICATION_SERVICE: 'http://localhost:3002/api'
   },

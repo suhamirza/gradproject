@@ -2,15 +2,11 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FaTrash } from 'react-icons/fa';
 import FadeContent from '../ReactBits/FadeContent';
-import { authService } from '../../services/authService';
+import { organizationService, type Organization, type CreateOrganizationRequest } from '../../services/organizationService';
 
-interface Workspace {
-  id: string;
-  name: string;
-  description: string;
-  memberCount: number;
+// Extended Workspace interface for frontend use
+interface Workspace extends Omit<Organization, 'ownerId' | 'ownerName' | 'status' | 'updatedAt'> {
   role: 'owner' | 'admin' | 'member';
-  createdAt: string;
   lastActivity: string;
   members: WorkspaceMember[];
 }
@@ -24,80 +20,52 @@ interface WorkspaceMember {
   avatar?: string;
 }
 
-// Mock workspaces data
-const mockWorkspaces: Workspace[] = [
-  {
-    id: '1',
-    name: 'Personal Projects',
-    description: 'My personal task management workspace',
-    memberCount: 1,
-    role: 'owner',
-    createdAt: '2024-01-15',
-    lastActivity: '2024-06-05',
-    members: [
-      {
-        id: '1',
-        name: 'Suha Mirza',
-        email: 'suha@example.com',
-        role: 'owner',
-        joinedAt: '2024-01-15'
-      }
-    ]
-  },
-  {
-    id: '2',
-    name: 'Team Alpha',
-    description: 'Collaborative workspace for our development team',
-    memberCount: 5,
-    role: 'admin',
-    createdAt: '2024-02-20',
-    lastActivity: '2024-06-04',
-    members: [
-      {
-        id: '1',
-        name: 'Suha Mirza',
-        email: 'suha@example.com',
-        role: 'admin',
-        joinedAt: '2024-02-20'
-      },
-      {
-        id: '2',
-        name: 'Yahya Ahmed',
-        email: 'yahya@example.com',
-        role: 'member',
-        joinedAt: '2024-02-22'
-      },
-      {
-        id: '3',
-        name: 'Muhammad Hassan',
-        email: 'muhammad@example.com',
-        role: 'member',
-        joinedAt: '2024-02-25'
-      }
-    ]
-  },
-  {
-    id: '3',
-    name: 'Marketing Campaign',
-    description: 'Managing marketing tasks and campaigns',
-    memberCount: 8,
-    role: 'member',
-    createdAt: '2024-03-10',
-    lastActivity: '2024-06-03',
-    members: []
-  }
-];
-
 export default function Workspaces() {
   const navigate = useNavigate();
-  const [workspaces, setWorkspaces] = React.useState<Workspace[]>(mockWorkspaces);
+  const [workspaces, setWorkspaces] = React.useState<Workspace[]>([]);
+  const [isLoading, setIsLoading] = React.useState(true);
+  const [error, setError] = React.useState<string | null>(null);
 
   // Utility function for role badge styling
   const getRoleBadgeClass = (role: 'owner' | 'admin' | 'member') => {
     if (role === 'owner') return 'bg-purple-100 text-purple-700';
     if (role === 'admin') return 'bg-blue-100 text-blue-700';
     return 'bg-gray-100 text-gray-700';
-  };  const [showCreateModal, setShowCreateModal] = React.useState(false);
+  };
+
+  // Load workspaces from backend
+  const loadWorkspaces = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      const response = await organizationService.getMyOrganizations();
+      
+      // Convert Organization data to Workspace format
+      const workspaceData: Workspace[] = response.organizations.map((org: Organization) => ({
+        id: org.id,
+        name: org.name,
+        description: org.description ?? '',
+        memberCount: org.memberCount ?? 1,
+        role: 'owner' as const, // User's organizations are owned by them
+        createdAt: org.createdAt,
+        lastActivity: org.updatedAt,
+        isArchived: org.isArchived,
+        members: [] // Will be loaded separately when needed
+      }));
+      
+      setWorkspaces(workspaceData);
+    } catch (error: any) {
+      console.error('Failed to load workspaces:', error);
+      setError(error.message ?? 'Failed to load workspaces');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Load workspaces on component mount
+  React.useEffect(() => {
+    loadWorkspaces();
+  }, []);const [showCreateModal, setShowCreateModal] = React.useState(false);
   const [showJoinModal, setShowJoinModal] = React.useState(false);
   const [showMembersModal, setShowMembersModal] = React.useState(false);
   const [deleteConfirm, setDeleteConfirm] = React.useState<string | null>(null);
@@ -111,36 +79,44 @@ export default function Workspaces() {
   
   // Join workspace form state
   const [joinCode, setJoinCode] = React.useState('');
-
-  const currentUser = authService.getCurrentUser();
   // Handle create workspace
   const handleCreateWorkspace = async () => {
     if (!newWorkspace.name.trim()) return;
 
-    const workspace: Workspace = {
-      id: Date.now().toString(),
-      name: newWorkspace.name,
-      description: newWorkspace.description,
-      memberCount: 1,
-      role: 'owner',
-      createdAt: new Date().toISOString().split('T')[0],
-      lastActivity: new Date().toISOString().split('T')[0],
-      members: [        {
-          id: currentUser?.id ?? '1',
-          name: currentUser?.firstName + ' ' + currentUser?.lastName || 'Current User',
-          email: currentUser?.email ?? 'user@example.com',
-          role: 'owner',
-          joinedAt: new Date().toISOString().split('T')[0]
-        }
-      ]
-    };    try {
-      // TODO: Implement API call to create workspace
-      console.log('Creating workspace:', workspace);
-      setWorkspaces((prev: Workspace[]) => [...prev, workspace]);
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const organizationData: CreateOrganizationRequest = {
+        name: newWorkspace.name.trim(),
+        description: newWorkspace.description.trim() !== '' ? newWorkspace.description.trim() : undefined
+      };
+
+      const response = await organizationService.createOrganization(organizationData);
+      
+      console.log('Organization created successfully:', response);
+      
+      // Add the new workspace to the list
+      const newWorkspaceData: Workspace = {
+        id: response.organization.id,
+        name: response.organization.name,
+        description: response.organization.description ?? '',
+        memberCount: 1,
+        role: 'owner',
+        createdAt: response.organization.createdAt,
+        lastActivity: response.organization.updatedAt,
+        isArchived: response.organization.isArchived,
+        members: []
+      };
+      
+      setWorkspaces((prev) => [...prev, newWorkspaceData]);
       setNewWorkspace({ name: '', description: '' });
       setShowCreateModal(false);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to create workspace:', error);
+      setError(error.message ?? 'Failed to create workspace. Please try again.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -160,12 +136,19 @@ export default function Workspaces() {
   };  // Handle delete workspace
   const handleDeleteWorkspace = async (workspaceId: string) => {
     try {
-      // TODO: Implement API call to delete workspace
+      setIsLoading(true);
+      setError(null);
+      
+      await organizationService.deleteOrganization(workspaceId);
       console.log('Deleting workspace:', workspaceId);
-      setWorkspaces((prev: Workspace[]) => prev.filter(w => w.id !== workspaceId));
+      
+      setWorkspaces((prev) => prev.filter(w => w.id !== workspaceId));
       setDeleteConfirm(null);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to delete workspace:', error);
+      setError(error.message ?? 'Failed to delete workspace');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -217,7 +200,32 @@ export default function Workspaces() {
             Join Workspace
           </button>
         </div>        {/* Workspaces Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {isLoading ? (
+          <div className="flex justify-center items-center py-12">
+            <div className="text-lg text-gray-600">Loading workspaces...</div>
+          </div>
+        ) : error ? (
+          <div className="text-center py-12">
+            <div className="text-red-600 mb-4">{error}</div>
+            <button 
+              onClick={loadWorkspaces}
+              className="px-4 py-2 bg-[#5C346E] text-white rounded-lg hover:bg-[#4A2B5A] transition-colors"
+            >
+              Try Again
+            </button>
+          </div>
+        ) : workspaces.length === 0 ? (
+          <div className="text-center py-12">
+            <div className="text-gray-600 mb-4">No workspaces found</div>
+            <button 
+              onClick={() => setShowCreateModal(true)}
+              className="px-4 py-2 bg-[#5C346E] text-white rounded-lg hover:bg-[#4A2B5A] transition-colors"
+            >
+              Create Your First Workspace
+            </button>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {workspaces.map((workspace: Workspace) => (
             <div
               key={workspace.id}
@@ -277,10 +285,10 @@ export default function Workspaces() {
                     <FaTrash size={16} />
                   </button>
                 )}
-              </div>
-            </div>
+              </div>            </div>
           ))}
         </div>
+        )}
 
         {/* Create Workspace Modal */}
         {showCreateModal && (
@@ -292,10 +300,14 @@ export default function Workspaces() {
               >
                 &times;
               </button>
-              
-              <div className="mb-6">
+                <div className="mb-6">
                 <h3 className="text-2xl font-bold text-[#5C346E] mb-2">Create New Workspace</h3>
                 <p className="text-gray-600">Set up a new workspace for your team</p>
+                {error && (
+                  <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg">
+                    <p className="text-red-600 text-sm">{error}</p>
+                  </div>
+                )}
               </div>
 
               <div className="space-y-4">
@@ -319,21 +331,24 @@ export default function Workspaces() {
                     className="w-full px-4 py-3 border-2 border-[#c7b3d6] rounded-lg outline-none focus:border-[#5C346E] transition-all duration-200 h-20 resize-none"
                   />
                 </div>
-              </div>
-
-              <div className="flex gap-3 mt-6">
+              </div>              <div className="flex gap-3 mt-6">
                 <button
-                  onClick={() => setShowCreateModal(false)}
-                  className="flex-1 px-6 py-3 bg-gray-500 text-white rounded-lg font-medium hover:bg-gray-600 transition-colors duration-200"
+                  onClick={() => {
+                    setShowCreateModal(false);
+                    setError(null);
+                    setNewWorkspace({ name: '', description: '' });
+                  }}
+                  disabled={isLoading}
+                  className="flex-1 px-6 py-3 bg-gray-500 text-white rounded-lg font-medium hover:bg-gray-600 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleCreateWorkspace}
-                  disabled={!newWorkspace.name.trim()}
+                  disabled={!newWorkspace.name.trim() || isLoading}
                   className="flex-1 px-6 py-3 bg-[#5C346E] text-white rounded-lg font-medium hover:bg-[#4A2B5A] transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Create
+                  {isLoading ? 'Creating...' : 'Create'}
                 </button>
               </div>
             </div>
