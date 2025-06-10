@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { useState, useEffect } from 'react';
-import { FaLock, FaPlus, FaTrash, FaPencilAlt } from 'react-icons/fa';
+import { FaLock, FaPlus, FaTrash, FaPencilAlt, FaGlobe } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
 import { useWorkspace } from '../../context/WorkspaceContext';
 import * as TaskService from '../../services/taskService';
@@ -25,6 +25,9 @@ const PRESET_TAGS: ListTag[] = [
 
 interface ProjectWithTag extends Project {
   tag?: ListTag | null;
+  mockId?: string; // Stable ID for React rendering
+  apiId?: string; // Real API ID when available
+  visibility?: 'public' | 'private'; // Frontend-only visibility setting
 }
 
 const Lists: React.FC = () => {
@@ -42,9 +45,8 @@ const Lists: React.FC = () => {
     // Context not available, use fallback
     console.warn('WorkspaceContext not available, using fallback');
   }
-  
-  const [projects, setProjects] = useState<ProjectWithTag[]>([]);
-  const [loading, setLoading] = useState(true);
+    const [projects, setProjects] = useState<ProjectWithTag[]>([]);
+  const [loading, setLoading] = useState(false); // Start with false, only set to true when actually loading
   const [workspaceMembers, setWorkspaceMembers] = useState<OrganizationMember[]>([]);
   const [showModal, setShowModal] = useState(false);
   const [newListTitle, setNewListTitle] = useState('');
@@ -64,30 +66,43 @@ const Lists: React.FC = () => {
   const [editTagCustom, setEditTagCustom] = useState<{label: string, color: string}>({label: '', color: '#c7b3d6'});
   const [editMembers, setEditMembers] = useState<string[]>([]);
   const [editListVisibility, setEditListVisibility] = useState<'private' | 'public'>('private');
-  const [editMemberSearch, setEditMemberSearch] = useState('');
-
-  // Load projects when workspace changes
+  const [editMemberSearch, setEditMemberSearch] = useState('');  // Load projects when workspace changes
   useEffect(() => {
     const loadProjects = async () => {
-      if (!currentWorkspace) return;
+      console.log('🔄 Lists.tsx: loadProjects called, currentWorkspace:', currentWorkspace);
+      console.log('🔄 Lists.tsx: workspaceLoading:', workspaceLoading);
+      
+      if (!currentWorkspace) {
+        console.log('⏸️ Lists.tsx: No currentWorkspace, skipping project load');
+        return;
+      }
       
       try {
+        console.log('📥 Lists.tsx: Starting to load projects for workspace:', currentWorkspace.id);
         setLoading(true);
-        const response = await TaskService.taskService.getProjects(currentWorkspace.id);
-        const projectsWithTags = response.projects.map((project: Project) => ({
+        const projects = await TaskService.taskService.getProjects(currentWorkspace.id);
+        console.log('✅ Lists.tsx: Projects loaded successfully:', projects.length, 'projects');
+        
+        const projectsWithTags = projects.map((project: Project) => ({
           ...project,
-          tag: null as ListTag | null
+          tag: null as ListTag | null,
+          visibility: 'private' as 'public' | 'private' // Default visibility for existing projects
         }));
         setProjects(projectsWithTags);
       } catch (error) {
-        console.error('Failed to load projects:', error);
+        console.error('❌ Lists.tsx: Failed to load projects:', error);
       } finally {
         setLoading(false);
       }
-    };
-
-    loadProjects();
-  }, [currentWorkspace]);
+    };    // Only load if we're not currently loading the workspace
+    if (!workspaceLoading) {
+      loadProjects();
+    } else {
+      console.log('⏳ Lists.tsx: Workspace is loading, waiting...');
+      // Reset loading state if workspace is loading
+      setLoading(false);
+    }
+  }, [currentWorkspace, workspaceLoading]);
 
   // Load workspace members
   useEffect(() => {
@@ -124,18 +139,18 @@ const Lists: React.FC = () => {
     try {
       let tag: ListTag | null = null;
       if (newListTagType === 'preset' && newListTagPreset) tag = newListTagPreset;
-      if (newListTagType === 'custom' && newListTagCustom.label) tag = { label: newListTagCustom.label, color: newListTagCustom.color };
-
-      // Create a mock project for now
-      const mockProject: ProjectWithTag = {
-        id: 'temp-' + Date.now(),
+      if (newListTagType === 'custom' && newListTagCustom.label) tag = { label: newListTagCustom.label, color: newListTagCustom.color };      // Create a mock project for now
+      const mockId = 'temp-' + Date.now();      const mockProject: ProjectWithTag = {
+        id: mockId,
         name: newListTitle,
         description: newListDescription || 'describe your list...',
         organizationId: currentWorkspace?.id || 'mock-workspace',
         isArchived: false,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
-        tag
+        tag,
+        mockId: mockId, // Add stable mockId from the start
+        visibility: newListVisibility // Add visibility setting
       };
 
       console.log('✅ Creating mock project:', mockProject);
@@ -159,16 +174,29 @@ const Lists: React.FC = () => {
             name: newListTitle,
             description: newListDescription || 'describe your list...',
             organizationId: currentWorkspace.id
-          };
-          
-          console.log('📝 Attempting real API call in background...');
-          const response = await TaskService.taskService.createProject(projectRequest);
-          console.log('✅ Real API success:', response);
-          
-          // Update the mock project with real data
-          setProjects(prev => prev.map(p => 
-            p.id === mockProject.id ? { ...response.project, tag } : p
-          ));
+          };            console.log('📝 Attempting real API call in background...');
+          const apiProject = await TaskService.taskService.createProject(projectRequest);
+          console.log('✅ Real API success:', apiProject);
+            // Validate response structure
+          if (apiProject && apiProject.id) {            // Update the mock project with real data while preserving stable key
+            setProjects(prev => prev.map(p => 
+              p.id === mockProject.id ? { 
+                ...apiProject, 
+                tag,
+                // Keep the mock ID as the primary ID for React rendering stability
+                id: mockProject.id, 
+                // Store the real API ID separately
+                apiId: apiProject.id,
+                mockId: mockProject.mockId,
+                // Preserve frontend-only visibility setting
+                visibility: mockProject.visibility
+              } : p
+            ));
+            console.log('✅ Mock project updated with real API data');
+          } else {
+            console.warn('⚠️ API response missing project data:', apiProject);
+            // Keep the mock project as-is if API fails
+          }
         } catch (error) {
           console.warn('⚠️ Real API failed, keeping mock project:', error);
         }
@@ -179,14 +207,35 @@ const Lists: React.FC = () => {
       alert('Failed to create project: ' + (error.message || 'Unknown error'));
     }
   };
-
   const handleDeleteList = async (id: string) => {
     try {
-      // Note: deleteProject doesn't exist in current API, so we'll just remove locally for now
+      const projectToDelete = projects.find(p => p.id === id);
+      if (!projectToDelete) {
+        console.warn('Project not found for deletion:', id);
+        return;
+      }
+
+      // If it's a mock project (has mockId but no apiId), just remove locally
+      if (projectToDelete.mockId && !projectToDelete.apiId) {
+        console.log('Deleting mock project locally:', id);
+        setProjects(prev => prev.filter(p => p.id !== id));
+        setDeleteConfirm(null);
+        return;
+      }      // For real projects, call the API
+      const projectIdToDelete = projectToDelete.apiId || projectToDelete.id;
+      console.log('Deleting real project via API:', projectIdToDelete);
+      console.log('Project organizationId:', projectToDelete.organizationId);
+      
+      await TaskService.taskService.deleteProject(projectIdToDelete, projectToDelete.organizationId);
+      
+      // Remove from local state after successful API call
       setProjects(prev => prev.filter(p => p.id !== id));
       setDeleteConfirm(null);
+      
+      console.log('✅ Project deleted successfully');
     } catch (error) {
-      console.error('Failed to delete project:', error);
+      console.error('❌ Failed to delete project:', error);
+      alert('Failed to delete project: ' + (error?.message || 'Unknown error'));
     }
   };
 
@@ -204,10 +253,9 @@ const Lists: React.FC = () => {
       setEditTagType('custom');
       setEditTagPreset(null);
       setEditTagCustom({ label: project.tag.label, color: project.tag.color });
-    }
-    // For now, use empty members array since we need to implement project members
+    }    // For now, use empty members array since we need to implement project members
     setEditMembers([]);
-    setEditListVisibility('private'); // Default since Project doesn't have isPublic
+    setEditListVisibility(project.visibility || 'private'); // Use actual project visibility
     setEditMemberSearch('');
   };
 
@@ -217,12 +265,10 @@ const Lists: React.FC = () => {
     try {
       let tag: ListTag | null = null;
       if (editTagType === 'preset' && editTagPreset) tag = editTagPreset;
-      if (editTagType === 'custom' && editTagCustom.label) tag = { label: editTagCustom.label, color: editTagCustom.color };
-
-      // Update the project locally (for tag and visibility)
+      if (editTagType === 'custom' && editTagCustom.label) tag = { label: editTagCustom.label, color: editTagCustom.color };      // Update the project locally (for tag and visibility)
       setProjects(prev => prev.map(p => 
         p.id === editListModal 
-          ? { ...p, tag } 
+          ? { ...p, tag, visibility: editListVisibility } 
           : p
       ));
       setEditListModal(null);
@@ -255,9 +301,26 @@ const Lists: React.FC = () => {
     } catch (error) {
       console.error('Failed to update project description:', error);
     }
-  };
+  };  if (workspaceLoading) {
+    console.log('📋 Lists.tsx: Showing workspace loading state');
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-[#5C346E] text-lg">Loading workspace...</div>
+      </div>
+    );
+  }
 
-  if (loading || workspaceLoading) {
+  if (!currentWorkspace) {
+    console.log('📋 Lists.tsx: No workspace available');
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-[#5C346E] text-lg">No workspace selected. Please select a workspace.</div>
+      </div>
+    );
+  }
+
+  if (loading) {
+    console.log('📋 Lists.tsx: Showing projects loading state');
     return (
       <div className="flex items-center justify-center h-64">
         <div className="text-[#5C346E] text-lg">Loading projects...</div>
@@ -265,15 +328,15 @@ const Lists: React.FC = () => {
     );
   }
 
+  console.log('🎯 Lists.tsx: Rendering projects, count:', projects.length);
+
   return (
     <FadeContent duration={900} delay={100}>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10 mt-6 w-full">
-        {/* Project Previews */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10 mt-6 w-full">        {/* Project Previews */}
         {projects.map((project) => (
-          <FadeContent key={project.id} duration={900} delay={100}>
-            <div
+          <FadeContent key={project.mockId || project.id} duration={900} delay={100}>            <div
               className="relative bg-white border-2 border-[#5C346E] rounded-2xl p-6 min-h-[320px] flex flex-col justify-between shadow hover:shadow-lg transition cursor-pointer"
-              onClick={() => navigate(`/app/workspace/${currentWorkspace?.id}/lists/${encodeURIComponent(project.name)}`)}
+              onClick={() => navigate(`/app/lists/${encodeURIComponent(project.name)}`)}
             >
               {/* Title (editable) */}
               <input
@@ -313,10 +376,9 @@ const Lists: React.FC = () => {
                 />
               </div>
               {/* Blank space for tasks */}
-              <div className="flex-1" />
-              {/* Visibility Icon - Always private for now since Project doesn't have isPublic */}
+              <div className="flex-1" />              {/* Visibility Icon */}
               <div className="absolute top-4 right-4 text-xl">
-                <FaLock />
+                {project.visibility === 'public' ? <FaGlobe /> : <FaLock />}
               </div>
               {/* Tag */}
               {project.tag && (
