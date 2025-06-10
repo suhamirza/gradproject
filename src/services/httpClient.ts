@@ -11,11 +11,10 @@ const createApiClient = (baseURL: string): AxiosInstance => {
       'Content-Type': 'application/json',
     },
   });
-
   // Request interceptor to add auth token
   client.interceptors.request.use(
     (config) => {
-      const token = localStorage.getItem('authToken');
+      const token = tokenManager.getToken();
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
       }
