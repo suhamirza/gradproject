@@ -1,0 +1,197 @@
+version: '3.8'
+services:
+  # API Gateway (Nginx)
+  # api-gateway:
+  #   build: ./api-gateway
+  #   container_name: api-gateway
+  #   ports:
+  #      - "80:80"
+  #    depends_on:
+  #     - user-service
+      # - task-service
+      # - notification-service
+      # - chat-service
+      # - file-service
+  # RabbitMQ for event-driven communication (shared by all services)
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      - RABBITMQ_DEFAULT_USER=guest
+      - RABBITMQ_DEFAULT_PASS=guest
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "check_port_connectivity"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    restart: unless-stopped
+
+  # User Service (.NET 8 Web API)
+  user-service:
+    build: ./user-service
+    container_name: user-service
+    ports:
+      - "5000:8080"  # Map container port 8080 to local port 5000
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672
+      - ConnectionStrings__DefaultConnection=Server=user-service-mysqldb;Port=3306;Database=UserDB;Uid=root;Pwd=root;SslMode=none
+    depends_on:
+      user-service-mysqldb:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+
+  ## Dedicated MySQL for User Service
+  user-service-mysqldb:
+    image: mysql:5.7
+    container_name: user-service-mysqldb
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: UserDB
+      MYSQL_ROOT_HOST: '%'
+    ports:
+      - "3307:3306"  # Exposed on a unique local port if needed
+    volumes:
+      - user_db_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-proot"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Task Service (Node.js)
+  task-service:
+    build: ./task-service
+    container_name: task-service
+    ports:
+      - "3001:3001"
+    environment:
+      - PORT=3001
+      - DB_CONNECTION=Server=task-service-mysqldb;Port=3306;Database=TaskDB;Uid=root;Pwd=root;SslMode=none
+    depends_on:
+      task-service-mysqldb:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      
+  # Dedicated MySQL for Task Service
+  task-service-mysqldb:
+    image: mysql:5.7
+    container_name: task-service-mysqldb
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: TaskDB
+      MYSQL_ROOT_HOST: '%'
+    ports:
+      - "3308:3306"
+    volumes:
+      - task_db_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-proot"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Notification Service (Node.js)
+  notification-service:
+    build: ./notification-service
+    container_name: notification-service
+    ports:
+      - "3002:3002"
+    environment:
+      - PORT=3002
+      - SMTP_HOST=smtp.gmail.com
+      - SMTP_USER=cinbatvedat@gmail.com
+      - SMTP_PORT=587
+      - SMTP_PASS=qtnykezbhuvipgbk
+      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+
+  # Dedicated MySQL for Notification Service
+  #notification-service-mysqldb:
+  #  image: mysql:5.7
+  #  container_name: notification-service-mysqldb
+  #  environment:
+  #    MYSQL_ROOT_PASSWORD: root
+  #    MYSQL_DATABASE: NotificationDB
+  #    MYSQL_ROOT_HOST: '%'
+  #  ports:
+  #    - "3309:3306"
+  #  volumes:
+  #    - notification_db_data:/var/lib/mysql
+  #  healthcheck:
+  #    test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-proot"]
+  #    interval: 10s
+  #    timeout: 5s
+  #    retries: 5
+
+  # File Service (Node.js) - Placeholder service using its own MySQL instance
+  # file-service:
+  #   build: ./file-service
+  #   container_name: file-service
+  #   ports:
+  #     - "3004:3004"
+  #   environment:
+  #     - PORT=3004
+  #     - DB_CONNECTION=Server=file-service-mysqldb;Database=FileDB;User=root;Password=yourpassword;
+  #   depends_on:
+  #     - file-service-mysqldb
+
+  # Dedicated MySQL for File Service
+  # file-service-mysqldb:
+  #   image: mysql:5.7
+  #   container_name: file-service-mysqldb
+  #   environment:
+  #     MYSQL_ROOT_PASSWORD: yourpassword
+  #     MYSQL_DATABASE: FileDB
+  #   ports:
+  #     - "3310:3306"
+  #   volumes:
+  #     - file_db_data:/var/lib/mysql
+
+  # Chat Service (Node.js) - Uses its own MongoDB instance
+  chat-service:
+    build: ./chat-service
+    container_name: chat-service
+    ports:
+      - "3003:3003"
+    environment:
+      - PORT=3003
+      - MONGO_CONNECTION=mongodb://chat-mongodb:27017/ChatDB
+      - NODE_ENV=development
+    depends_on:
+      chat-mongodb:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+
+  # Dedicated MongoDB for Chat Service
+  chat-mongodb:
+    image: mongo:latest
+    container_name: chat-mongodb
+    ports:
+      - "27018:27017"  # Expose on a different local port if needed
+    volumes:
+      - chat_mongo_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+volumes:
+  user_db_data:
+  task_db_data:
+  notification_db_data:
+  rabbitmq_data:
+  # file_db_data:
+  chat_mongo_data:
