@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Chat App</title>
+  <style>
+    :root {
+      --primary-color: #007bff;
+      --secondary-color: #e0e0e0;
+      --background: #f5f5f5;
+      --font-family: Arial, sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: var(--font-family);
+      background: var(--background);
+      height: 100vh;
+      display: flex;
+    }
+    .container {
+      display: flex;
+      flex: 1;
+    }
+    aside {
+      width: 250px;
+      background: #fff;
+      border-right: 1px solid #ddd;
+      padding: 1rem;
+      display: flex;
+      flex-direction: column;
+    }
+    aside input,
+    aside button {
+      width: 100%;
+      margin-bottom: 0.5rem;
+      padding: 0.5rem;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+    aside button {
+      background: var(--primary-color);
+      color: #fff;
+      border: none;
+      cursor: pointer;
+    }
+    aside button:hover {
+      background: #0056b3;
+    }
+    .channels-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      overflow-y: auto;
+      flex: 1;
+    }
+    .channels-list li {
+      padding: 0.5rem;
+      cursor: pointer;
+      border-radius: 4px;
+      margin-bottom: 0.25rem;
+    }
+    .channels-list li:hover,
+    .channels-list li.active {
+      background: var(--secondary-color);
+    }
+    main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      background: #fafafa;
+    }
+    .messages {
+      flex: 1;
+      padding: 1rem;
+      overflow-y: auto;
+    }
+    .message {
+      margin-bottom: 0.5rem;
+    }
+    .message .username {
+      font-weight: bold;
+      margin-right: 0.5rem;
+    }
+    .input-area {
+      display: flex;
+      border-top: 1px solid #ddd;
+      padding: 0.5rem;
+    }
+    .input-area input {
+      flex: 1;
+      padding: 0.5rem;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      margin-right: 0.5rem;
+    }
+    .input-area button {
+      padding: 0.5rem 1rem;
+      border: none;
+      background: var(--primary-color);
+      color: #fff;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .input-area button:hover {
+      background: #0056b3;
+    }
+    .members-section {
+      width: 200px;
+      background: #fff;
+      border-left: 1px solid #ddd;
+      padding: 1rem;
+    }
+    .members-section h3 {
+      margin: 0 0 1rem 0;
+      font-size: 1rem;
+      color: #333;
+    }
+    .members-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+    .members-list li {
+      padding: 0.5rem;
+      border-bottom: 1px solid #eee;
+      display: flex;
+      align-items: center;
+    }
+    .members-list li:last-child {
+      border-bottom: none;
+    }
+    .member-status {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      margin-right: 8px;
+    }
+    .member-status.online {
+      background: #28a745;
+    }
+    .member-status.offline {
+      background: #dc3545;
+    }
+    .channels-list li.has-unread {
+      position: relative;
+    }
+    .channels-list li.has-unread::after {
+      content: '';
+      position: absolute;
+      right: 8px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 8px;
+      height: 8px;
+      background: var(--primary-color);
+      border-radius: 50%;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <aside>
+      <input type="text" id="token" placeholder="Enter JWT token..." />
+      <button id="connectBtn">Connect</button>
+      <ul class="channels-list" id="channels"></ul>
+    </aside>
+    <main>
+      <div class="messages"></div>
+      <div class="input-area">
+        <input type="text" id="message" placeholder="Type your message..." />
+        <button id="sendBtn">Send</button>
+      </div>
+    </main>
+    <div class="members-section">
+      <h3>Channel Members</h3>
+      <ul class="members-list" id="members"></ul>
+    </div>
+  </div>
+
+  <script src="https://cdn.socket.io/4.5.0/socket.io.min.js"></script>
+  <script>
+    let socket;
+    let currentChannelId = null;
+
+    const tokenInput = document.getElementById('token');
+    const connectBtn = document.getElementById('connectBtn');
+    const channelsListEl = document.getElementById('channels');
+    const messagesEl = document.querySelector('.messages');
+    const messageInput = document.getElementById('message');
+    const sendBtn = document.getElementById('sendBtn');
+
+    connectBtn.addEventListener('click', () => {
+      const token = tokenInput.value.trim();
+      if (!token) return alert('Please provide a JWT token');
+
+      socket = io('http://localhost:3003', { auth: { token } });
+
+      socket.on('connect', () => {
+        console.log('Connected to server');
+        socket.emit('join');
+      });
+
+      socket.on('channels', (channels) => renderChannels(channels));
+
+      socket.on('channelMessages', (data) => {
+        currentChannelId = data.channelId;
+        renderMessages(data.messages);
+        data.messages.forEach(msg => {
+          if (!msg.isRead) {
+            socket.emit('messageRead', { messageId: msg._id });
+          }
+        });
+      });
+
+      socket.on('message', (msg) => {
+        if (msg.channelId === currentChannelId) {
+          appendMessage(msg);
+          socket.emit('messageRead', { messageId: msg._id });
+        } else {
+          const channelItem = document.querySelector(`.channels-list li[data-id="${msg.channelId}"]`);
+          if (channelItem) {
+            channelItem.classList.add('has-unread');
+          }
+        }
+      });
+
+      socket.on('messageRead', async ({ messageId }) => {
+        try {
+          const userId = socket.user.id;
+          const username = socket.user.username;
+
+          // Mark message as read using chat service
+          await markMessageAsRead(messageId, userId, username);
+
+          // Notify sender
+          const message = await getMessage(messageId);
+          const senderSocketId = connectedUsers.get(message.senderId);
+          if (senderSocketId) {
+            io.to(senderSocketId).emit('messageStatus', {
+              messageId,
+              status: 'read',
+              readBy: userId
+            });
+          }
+        } catch (error) {
+          console.error('Error in messageRead:', error);
+          socket.emit('error', { message: 'Failed to mark message as read' });
+        }
+      });
+
+      socket.on('messageStatus', ({ messageId, status, readBy }) => {
+        // Update message status in UI if needed
+        const messageElement = document.querySelector(`[data-message-id="${messageId}"]`);
+        if (messageElement) {
+          messageElement.classList.add(`status-${status}`);
+        }
+      });
+
+      socket.on('error', (err) => alert(err.message || err));
+    });
+
+    sendBtn.addEventListener('click', () => {
+      const content = messageInput.value.trim();
+      if (!content || !currentChannelId) return;
+      socket.emit('message', { channelId: currentChannelId, content });
+      messageInput.value = '';
+    });
+
+    function renderChannels(channels) {
+      channelsListEl.innerHTML = '';
+      channels.forEach((ch) => {
+        const li = document.createElement('li');
+        li.textContent = ch.name;
+        li.dataset.id = ch._id;
+        li.addEventListener('click', () => {
+          document.querySelector('.channels-list .active')?.classList.remove('active');
+          li.classList.add('active');
+          if (currentChannelId !== ch._id) {
+            currentChannelId = ch._id;
+            socket.emit('joinChannel', { channelId: ch._id });
+            fetchChannelMembers(ch._id);
+            li.classList.remove('has-unread');
+          }
+        });
+        channelsListEl.appendChild(li);
+      });
+    }
+
+    async function fetchChannelMembers(channelId) {
+      try {
+        const response = await fetch(`http://localhost:3003/channels/${channelId}/members`, {
+          headers: {
+            'Authorization': `Bearer ${tokenInput.value.trim()}`
+          }
+        });
+        if (!response.ok) throw new Error('Failed to fetch members');
+        const members = await response.json();
+        renderMembers(members);
+      } catch (error) {
+        console.error('Error fetching members:', error);
+      }
+    }
+
+    function renderMembers(members) {
+      const membersListEl = document.getElementById('members');
+      membersListEl.innerHTML = '';
+      members.forEach(member => {
+        const li = document.createElement('li');
+        const statusSpan = document.createElement('span');
+        statusSpan.classList.add('member-status');
+        statusSpan.classList.add(member.isOnline ? 'online' : 'offline');
+        li.appendChild(statusSpan);
+        li.appendChild(document.createTextNode(member.userName));
+        membersListEl.appendChild(li);
+      });
+    }
+
+    socket.on('userOnline', ({ userId }) => {
+      const membersListEl = document.getElementById('members');
+      const memberItems = membersListEl.getElementsByTagName('li');
+      for (let item of memberItems) {
+        if (item.dataset.userId === userId) {
+          item.querySelector('.member-status').classList.add('online');
+          item.querySelector('.member-status').classList.remove('offline');
+        }
+      }
+    });
+
+    socket.on('userOffline', ({ userId }) => {
+      const membersListEl = document.getElementById('members');
+      const memberItems = membersListEl.getElementsByTagName('li');
+      for (let item of memberItems) {
+        if (item.dataset.userId === userId) {
+          item.querySelector('.member-status').classList.add('offline');
+          item.querySelector('.member-status').classList.remove('online');
+        }
+      }
+    });
+
+    function renderMessages(messages) {
+      messagesEl.innerHTML = '';
+      messages.forEach(msg => {
+        const div = document.createElement('div');
+        div.classList.add('message');
+        div.dataset.messageId = msg._id;
+        div.innerHTML = `
+          <span class="username">${msg.username}:</span>
+          <span class="content">${msg.content}</span>
+          <span class="time">${new Date(msg.createdAt).toLocaleTimeString()}</span>
+          <span class="status"></span>
+        `;
+        messagesEl.appendChild(div);
+      });
+      messagesEl.scrollTop = messagesEl.scrollHeight;
+    }
+
+    function appendMessage(msg) {
+      const div = document.createElement('div');
+      div.classList.add('message');
+      div.dataset.messageId = msg._id;
+      div.innerHTML = `
+        <span class="username">${msg.username}:</span>
+        <span class="content">${msg.content}</span>
+        <span class="time">${new Date(msg.createdAt).toLocaleTimeString()}</span>
+        <span class="status"></span>
+      `;
+      messagesEl.appendChild(div);
+      messagesEl.scrollTop = messagesEl.scrollHeight;
+    }
+
+    const style = document.createElement('style');
+    style.textContent = `
+      .channels-list li.has-unread {
+        position: relative;
+      }
+      .channels-list li.has-unread::after {
+        content: '';
+        position: absolute;
+        right: 8px;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 8px;
+        height: 8px;
+        background: var(--primary-color);
+        border-radius: 50%;
+      }
+    `;
+    document.head.appendChild(style);
+
+    const messageStyle = document.createElement('style');
+    messageStyle.textContent = `
+      .message .time {
+        font-size: 0.8em;
+        color: #666;
+        margin-left: 8px;
+      }
+      .message .status {
+        font-size: 0.8em;
+        color: #666;
+        margin-left: 8px;
+      }
+      .message.status-read .status::after {
+        content: '✓';
+        color: #28a745;
+      }
+    `;
+    document.head.appendChild(messageStyle);
+  </script>
+</body>
+</html>
