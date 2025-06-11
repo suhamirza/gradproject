@@ -1,0 +1,24 @@
+# Node.js specific
+node_modules/
+npm-debug.log
+yarn-error.log
+dist/
+build/
+
+# .NET specific
+bin/
+obj/
+*.user
+*.suo
+*.vscode/
+
+# Docker
+docker-compose.override.yml
+.DS_Store
+.env
+
+# Others
+*.log
+
+# Env files
+.env
