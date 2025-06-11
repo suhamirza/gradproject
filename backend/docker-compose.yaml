@@ -1,4 +1,8 @@
 version: '3.8'
+
+# Use the same project name as the original Taskify to maintain volume compatibility
+name: taskify
+
 services:
   # API Gateway (Nginx)
   # api-gateway:
