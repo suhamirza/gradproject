@@ -11,7 +11,7 @@ const Navbar = () => {
           <img src={taskifyLogo} alt="Taskify Logo" className="w-full" />
         </div>
         <nav className="flex space-x-10 ">
-          <a href="#" className="text-black font-semibold hover:text-[#5E3073] transition-all duration-300 ease-in-out">Home</a>
+          <a href="#" className="text-black font-semibold hover:text-[#5E3073] transition-all duration-300 ease-in-out">HomeTest</a>
           <a href="#features" className="text-black font-semibold hover:text-[#5E3073] transition-all duration-300 ease-in-out">Features</a>
           <a href="#contacts" className="text-black font-semibold hover:text-[#5E3073] transition-all duration-300 ease-in-out">Contacts</a>
         </nav>
