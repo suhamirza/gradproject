@@ -10,7 +10,7 @@ const orgApiCall = async <T>(
   data?: any
 ): Promise<T> => {
   try {
-    const response = await client.request<T>({
+    const response = await client.request({
       method,
       url: endpoint,
       data,
@@ -129,15 +129,36 @@ export const organizationService = {  // Create a new organization
       'POST',
       `${API_CONFIG.ENDPOINTS.TASKS.ORGANIZATIONS}/${organizationId}/join`
     );
-  },
-
-  // Delete/Archive organization
+  },  // Delete/Archive organization
   deleteOrganization: async (id: string): Promise<{ message: string; organization: Organization }> => {
-    return await orgApiCall(
-      apiClients.taskService,
-      'DELETE',
-      `${API_CONFIG.ENDPOINTS.TASKS.ORGANIZATIONS}/${id}`
-    );
+    try {
+      console.log('Attempting to delete organization with ID:', id);
+      
+      // Always try with force=true first since we're the owner
+      const result = await orgApiCall<{ message: string; organization: Organization }>(
+        apiClients.taskService,
+        'DELETE',
+        `${API_CONFIG.ENDPOINTS.TASKS.ORGANIZATIONS}/${id}?force=true`
+      );
+      
+      console.log('Delete organization result:', result);
+      return result;
+    } catch (error: any) {
+      console.error('Delete organization error:', error);
+      
+      // More detailed error handling
+      if (error.statusCode === 400) {
+        throw new Error(error.message || 'Bad request - check if you have permission to delete this organization');
+      } else if (error.statusCode === 401) {
+        throw new Error('Authentication failed - please log in again');
+      } else if (error.statusCode === 403) {
+        throw new Error('Access denied - you must be an admin to delete this organization');
+      } else if (error.statusCode === 404) {
+        throw new Error('Organization not found');
+      } else {
+        throw new Error(error.message || 'Failed to delete organization');
+      }
+    }
   },
 
   // Get organization members

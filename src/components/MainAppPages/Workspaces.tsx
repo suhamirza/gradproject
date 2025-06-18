@@ -32,7 +32,6 @@ export default function Workspaces() {
     if (role === 'admin') return 'bg-blue-100 text-blue-700';
     return 'bg-gray-100 text-gray-700';
   };
-
   // Load workspaces from backend
   const loadWorkspaces = async () => {
     try {
@@ -40,18 +39,20 @@ export default function Workspaces() {
       setError(null);
       const response = await organizationService.getMyOrganizations();
       
-      // Convert Organization data to Workspace format
-      const workspaceData: Workspace[] = response.organizations.map((org: Organization) => ({
-        id: org.id,
-        name: org.name,
-        description: org.description ?? '',
-        memberCount: org.memberCount ?? 1,
-        role: 'owner' as const, // User's organizations are owned by them
-        createdAt: org.createdAt,
-        lastActivity: org.updatedAt,
-        isArchived: org.isArchived,
-        members: [] // Will be loaded separately when needed
-      }));
+      // Convert Organization data to Workspace format and filter out archived ones
+      const workspaceData: Workspace[] = response.organizations
+        .filter((org: Organization) => !org.isArchived) // Only show active organizations
+        .map((org: Organization) => ({
+          id: org.id,
+          name: org.name,
+          description: org.description ?? '',
+          memberCount: org.memberCount ?? 1,
+          role: 'owner' as const, // User's organizations are owned by them
+          createdAt: org.createdAt,
+          lastActivity: org.updatedAt,
+          isArchived: org.isArchived,
+          members: [] // Will be loaded separately when needed
+        }));
       
       setWorkspaces(workspaceData);
     } catch (error: any) {
@@ -139,11 +140,18 @@ export default function Workspaces() {
       setIsLoading(true);
       setError(null);
       
-      await organizationService.deleteOrganization(workspaceId);
-      console.log('Deleting workspace:', workspaceId);
+      console.log('Deleting workspace with ID:', workspaceId);
       
-      setWorkspaces((prev) => prev.filter(w => w.id !== workspaceId));
+      const result = await organizationService.deleteOrganization(workspaceId);      console.log('Delete workspace result:', result);
+      
+      // Remove the workspace from the list immediately
+      setWorkspaces((prev: Workspace[]) => prev.filter((w: Workspace) => w.id !== workspaceId));
       setDeleteConfirm(null);
+      
+      // Also refresh the list from backend to ensure consistency
+      await loadWorkspaces();
+      
+      console.log('Workspace deleted successfully');
     } catch (error: any) {
       console.error('Failed to delete workspace:', error);
       setError(error.message ?? 'Failed to delete workspace');

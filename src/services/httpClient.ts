@@ -10,23 +10,32 @@ const createApiClient = (baseURL: string): AxiosInstance => {
     headers: {
       'Content-Type': 'application/json',
     },
-  });
-  // Request interceptor to add auth token
+  });  // Request interceptor to add auth token
   client.interceptors.request.use(
     (config) => {
       const token = tokenManager.getToken();
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
+        console.log('Adding auth token to request:', config.url, 'Token exists:', !!token);
+      } else {
+        console.warn('No auth token found for request:', config.url);
       }
       return config;
     },
     (error) => Promise.reject(error)
-  );
-
-  // Response interceptor for error handling
+  );  // Response interceptor for error handling
   client.interceptors.response.use(
     (response: AxiosResponse) => response,
     (error: AxiosError) => {
+      console.error('API Error:', {
+        url: error.config?.url,
+        method: error.config?.method,
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+        fullError: error.response
+      });
+
       const apiError: ApiError = {
         message: 'An error occurred',
         statusCode: error.response?.status || 500,
@@ -35,8 +44,11 @@ const createApiClient = (baseURL: string): AxiosInstance => {
 
       if (error.response?.data) {
         const errorData = error.response.data as any;
-        apiError.message = errorData.message || errorData.error || 'An error occurred';
+        apiError.message = errorData.message || errorData.error || errorData.Error || 'An error occurred';
         apiError.errors = errorData.errors || [];
+        
+        // Log the exact error data structure
+        console.error('Error data structure:', errorData);
       } else if (error.message) {
         apiError.message = error.message;
       }
@@ -80,14 +92,18 @@ export const apiCall = async <T>(
 export const tokenManager = {
   setToken: (token: string) => {
     localStorage.setItem('authToken', token);
+    // Also store with 'token' key for backward compatibility
+    localStorage.setItem('token', token);
   },
   
   getToken: (): string | null => {
-    return localStorage.getItem('authToken');
+    // Try both keys to ensure compatibility
+    return localStorage.getItem('authToken') || localStorage.getItem('token');
   },
   
   removeToken: () => {
     localStorage.removeItem('authToken');
+    localStorage.removeItem('token');
   },
   
   setRefreshToken: (refreshToken: string) => {
@@ -101,10 +117,10 @@ export const tokenManager = {
   removeRefreshToken: () => {
     localStorage.removeItem('refreshToken');
   },
-  
-  clearAll: () => {
+    clearAll: () => {
     localStorage.removeItem('authToken');
     localStorage.removeItem('refreshToken');
+    localStorage.removeItem('token');
   }
 };
 
