@@ -1,7 +1,11 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useTitle } from '../../context/TitleContext';
 import { useWorkspace } from '../../context/WorkspaceContext';
+import { useUser } from '../../context/UserContext';
+import { organizationService, type OrganizationMember } from '../../services/organizationService';
 import FadeContent from '../../components/ReactBits/FadeContent';
+import AddMemberModal from '../UI/AddMemberModal';
+import MembersModal from '../UI/MembersModal';
 
 
 const statusOptions = ['Active', 'Completed', 'On Hold'];
@@ -9,28 +13,73 @@ const statusOptions = ['Active', 'Completed', 'On Hold'];
 export default function Overview() {
   const { title, setTitle } = useTitle();
   const { currentWorkspace, updateWorkspace, isLoading, error } = useWorkspace();
-  
-  // Form state  
+  const { user } = useUser();
+    // Form state  
   const [description, setDescription] = useState('');
   const [status, setStatus] = useState('Active');
-  const [lead, setLead] = useState('');
-  const [members, setMembers] = useState<string[]>([]);
-  const [memberInput, setMemberInput] = useState('');
+  const [lead, setLead] = useState('');  const [members, setMembers] = useState<OrganizationMember[]>([]);
+  const [showAddMemberModal, setShowAddMemberModal] = useState(false);
+  const [showMembersModal, setShowMembersModal] = useState(false);
+  const [membersLoading, setMembersLoading] = useState(false);
   const [projectDetails, setProjectDetails] = useState('');
-  const inputRef = useRef<HTMLInputElement | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);const inputRef = useRef<HTMLInputElement | null>(null);
   const spanRef = useRef<HTMLSpanElement | null>(null);
-  const memberInputRef = useRef<HTMLInputElement | null>(null);
-  const memberSpanRef = useRef<HTMLSpanElement | null>(null);
-  const projectDetailsRef = useRef<HTMLTextAreaElement | null>(null);
-
-  // Sync workspace data with form when workspace changes
+  const projectDetailsRef = useRef<HTMLTextAreaElement | null>(null);  // Sync workspace data with form when workspace changes
   useEffect(() => {
     if (currentWorkspace) {
       setTitle(currentWorkspace.name);
       setDescription(currentWorkspace.description ?? '');
       console.log('Syncing workspace data to form:', currentWorkspace);
+      console.log('Current user when loading workspace:', user);
+      
+      // Load members and check if current user is admin
+      if (user?.id) {
+        loadMembers();
+      } else {
+        console.warn('User not loaded yet, waiting...');
+      }
     }
-  }, [currentWorkspace, setTitle]);
+  }, [currentWorkspace, user, setTitle]);// Load organization members
+  const loadMembers = async () => {
+    if (!currentWorkspace?.id || !user?.id) return;
+    
+    setMembersLoading(true);
+    try {
+      const response = await organizationService.getOrganizationMembers(currentWorkspace.id);
+      console.log('Members API response:', response);
+      setMembers(response.members);
+      
+      // Check if current user is admin by finding them in the members list
+      const currentUserMember = response.members.find(member => member.userId === user.id);
+      const isCurrentUserAdmin = currentUserMember?.role === 'admin';
+      
+      console.log('Current user ID:', user.id);
+      console.log('Current user member:', currentUserMember);
+      console.log('Is current user admin:', isCurrentUserAdmin);
+      
+      setIsAdmin(isCurrentUserAdmin || false);
+    } catch (error) {
+      console.error('Failed to load members:', error);
+      // Set empty array on error to prevent UI issues
+      setMembers([]);
+      setIsAdmin(false);
+    } finally {
+      setMembersLoading(false);
+    }
+  };const handleMemberRemove = async (member: OrganizationMember) => {
+    if (!currentWorkspace?.id) return;
+    
+    try {
+      const response = await organizationService.removeMember(currentWorkspace.id, member.userId);
+      console.log('Remove member API response:', response);
+      // Reload members after successful removal
+      loadMembers();
+    } catch (error) {
+      console.error('Failed to remove member:', error);
+      // You could add a toast notification here for better UX
+      alert('Failed to remove member. Please try again.');
+    }
+  };
 
   // Save description changes to database with debouncing
   useEffect(() => {
@@ -63,31 +112,11 @@ export default function Overview() {
 
     return () => clearTimeout(timeoutId);
   }, [title, currentWorkspace, updateWorkspace]);
-
   useEffect(() => {
     if (inputRef.current && spanRef.current) {
       inputRef.current.style.width = `${spanRef.current.offsetWidth}px`;
     }
   }, [lead]);
-
-  useEffect(() => {
-    if (memberInputRef.current && memberSpanRef.current) {
-      memberInputRef.current.style.width = `${memberSpanRef.current.offsetWidth}px`;
-    }
-  }, [memberInput]);
-
-  const handleMemberAdd = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter' && memberInput.trim()) {
-      if (!members.includes(memberInput.trim())) {
-        setMembers([...members, memberInput.trim()]);
-      }
-      setMemberInput('');
-    }
-  };
-
-  const handleMemberRemove = (member: string) => {
-    setMembers(members.filter(m => m !== member));
-  };
 
   const handleProjectDetailsChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setProjectDetails(e.target.value);
@@ -95,7 +124,7 @@ export default function Overview() {
       projectDetailsRef.current.style.height = 'auto';
       projectDetailsRef.current.style.height = projectDetailsRef.current.scrollHeight + 'px';
     }
-  };  return (
+  };return (
     <div className="flex flex-col items-start relative">
       
       {/* Organization ID Display - Absolute Top Right */}
@@ -146,8 +175,7 @@ export default function Overview() {
           ))}
         </select>
       </div>
-      </FadeContent>
-      {/* Team Lead Input */}
+      </FadeContent>      {/* Team Lead Input */}
       <FadeContent>
       <div className="mb-7 flex items-center">
         <label className="font-bold mr-5 text-[1.375rem]">Lead</label>
@@ -170,48 +198,25 @@ export default function Overview() {
           </span>
         </div>
       </div>
-      </FadeContent>
-      {/* Members Input */}
+      </FadeContent>{/* Members Section */}
       <FadeContent>
-      <div className="mb-7 flex items-center w-full gap-4">
-        <label className="font-bold mr-5 text-[1.375rem] whitespace-nowrap">Members</label>
-        <div className="flex flex-wrap gap-4 items-center flex-1 min-w-0">
-          {members.map(member => (
-            <span key={member} className="flex items-center bg-gray-200 rounded-2xl px-5 py-2 font-semibold text-[1.25rem] mb-2">
-              {member}
-              <button
-                type="button"
-                onClick={() => handleMemberRemove(member)}
-                className="ml-2 text-gray-500 hover:text-red-500 focus:outline-none"
-              >
-                &times;
-              </button>
-            </span>
-          ))}
-          <div className="relative flex items-center">
-            <input
-              type="text"
-              value={memberInput}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setMemberInput(e.target.value)}
-              onKeyDown={handleMemberAdd}
-              placeholder="Add Member"
-              className="border-2 border-gray-300 rounded-xl px-4 py-2 font-semibold outline-none bg-[#fafafa] text-[1.25rem] min-w-[11rem] w-auto transition-all duration-100 flex-shrink-0 text-center"
-              ref={memberInputRef}
-              style={{ width: 'auto' }}
-            />
-            <span
-              ref={memberSpanRef}
-              className="invisible absolute left-0 top-0 whitespace-pre px-4 py-2 font-semibold text-[1.25rem] min-w-[11rem] text-center"
-              aria-hidden="true"
-            >
-              {memberInput || 'Add member'}
-            </span>
+      <div className="mb-7 flex items-center">
+        <label className="font-bold mr-5 text-[1.375rem]">Members</label>        <button
+          onClick={() => setShowMembersModal(true)}
+          className="group relative px-6 py-3 bg-[#5C346E] text-white rounded-2xl font-semibold text-[1.125rem] shadow-lg hover:shadow-xl hover:scale-105 transform transition-all duration-200 flex items-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+          disabled={membersLoading}
+        >
+          <span>{membersLoading ? 'Loading...' : 'View Members'}</span>
+          <div className="bg-white bg-opacity-20 px-2 py-1 rounded-full text-sm font-bold">
+            {membersLoading ? '...' : members.length}
           </div>
-        </div>      </div>
+          <div className="absolute inset-0 bg-white opacity-0 group-hover:opacity-10 rounded-2xl transition-opacity duration-200"></div>
+        </button>
+      </div>
       </FadeContent>
       
       {/* Divider */}
-      <hr className="w-full border-t-1 border-[##9CA3AF] mt-2" />{/* Project Details Textarea */}
+      <hr className="w-full border-t-1 border-[##9CA3AF] mt-2" />      {/* Project Details Textarea */}
       <FadeContent>
       <textarea
         ref={projectDetailsRef}
@@ -222,7 +227,28 @@ export default function Overview() {
         style={{ minHeight: '3.5rem', resize: 'none' }}
         rows={2}
       />
-      </FadeContent>
+      </FadeContent>      {/* Add Member Modal */}
+      {showAddMemberModal && currentWorkspace && (
+        <AddMemberModal
+          organizationId={currentWorkspace.id}
+          onClose={() => setShowAddMemberModal(false)}
+          onSuccess={loadMembers}
+        />
+      )}
+
+      {/* Members Modal */}
+      {showMembersModal && (
+        <MembersModal
+          members={members}
+          isAdmin={isAdmin}
+          onClose={() => setShowMembersModal(false)}
+          onAddMember={() => {
+            setShowMembersModal(false);
+            setShowAddMemberModal(true);
+          }}
+          onRemoveMember={handleMemberRemove}
+        />
+      )}
     </div>
   );
 }
