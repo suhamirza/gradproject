@@ -2,69 +2,253 @@ import React, { useState, useRef, useEffect } from "react";
 import type { ChangeEvent, FormEvent } from "react";
 import FadeContent from "../ReactBits/FadeContent";
 
-// Types for chat and message
+// Types for chat and message - Backend Compatible
 interface Message {
-  sender: string;
-  text: string;
-  time: string;
+  _id?: string;
+  channelId: string;
+  senderId: string;
+  senderName: string;
+  content: string;
+  type: string;
+  status: string;
+  isDeleted: boolean;
+  isEdited: boolean;
+  createdAt: string;
+  updatedAt: string;
+  editedAt?: string;
+}
+
+interface ChannelMember {
+  _id?: string;
+  channelId: string;
+  userId: string;
+  userName: string;
+  isActive: boolean;
+  joinedAt: string;
 }
 
 interface Chat {
-  id: number;
+  _id: string;
+  organizationId: string;
   name: string;
-  lastMessage: string;
-  time: string;
-  unread: number;
-  messages: Message[];
-  members: string[];
-  owner: string; // NEW: owner/creator of the group
-  admins: string[]; // NEW: admin members
+  type: 'private' | 'public';
+  ownerId: string;
+  ownerName: string;
+  isArchived: boolean;
+  createdAt: string;
+  updatedAt: string;
+  // Frontend calculated fields
+  lastMessage?: string;
+  lastMessageTime?: string;
+  unreadCount?: number;
+  messages?: Message[];
+  members?: ChannelMember[];
 }
 
-// Dummy data for demonstration
+// Dummy data for demonstration - Backend Compatible
 const dummyChats: Chat[] = [
   {
-    id: 1,
+    _id: "675a1b2c3d4e5f6789012345",
+    organizationId: "org_123456789",
     name: "General",
+    type: "public",
+    ownerId: "user_suha123",
+    ownerName: "Suha",
+    isArchived: false,
+    createdAt: "2024-12-20T10:00:00Z",
+    updatedAt: "2024-12-20T20:13:00Z",
     lastMessage: "Hey guys, I think that we should...",
-    time: "8:13 pm",
-    unread: 2,
+    lastMessageTime: "8:13 pm",
+    unreadCount: 2,
     messages: [
-      { sender: "Yahya", text: "hey suha, i was thinking lets start the frontend work today? we could get a proper headstart and we have a bunch of exams coming up too. if we start now it’ll be easier on us", time: "8:13 pm" },
-      { sender: "You", text: "Yeah i was thinking the same. shall i begin the design on figma rn then? i can start up the file and send you the link", time: "8:14 pm" },
-      { sender: "Suha", text: "yes do it, i'll check and add some screens too", time: "8:15 pm" },
-      { sender: "You", text: "Oh yes you’re right it would be best to do that tbh. alright lets do it on my ipad then, ill share screen on it", time: "8:16 pm" },
-      { sender: "Yahya", text: "Sure, why dont you give me a couple of minutes and we can begin? i just have some things to take care of first.", time: "8:17 pm" },
+      {
+        _id: "msg_001",
+        channelId: "675a1b2c3d4e5f6789012345",
+        senderId: "user_yahya123",
+        senderName: "Yahya",
+        content: "hey suha, i was thinking lets start the frontend work today? we could get a proper headstart and we have a bunch of exams coming up too. if we start now it'll be easier on us",
+        type: "text",
+        status: "delivered",
+        isDeleted: false,
+        isEdited: false,
+        createdAt: "2024-12-20T20:13:00Z",
+        updatedAt: "2024-12-20T20:13:00Z"
+      },
+      {
+        _id: "msg_002",
+        channelId: "675a1b2c3d4e5f6789012345",
+        senderId: "user_current",
+        senderName: "You",
+        content: "Yeah i was thinking the same. shall i begin the design on figma rn then? i can start up the file and send you the link",
+        type: "text",
+        status: "delivered",
+        isDeleted: false,
+        isEdited: false,
+        createdAt: "2024-12-20T20:14:00Z",
+        updatedAt: "2024-12-20T20:14:00Z"
+      },
+      {
+        _id: "msg_003",
+        channelId: "675a1b2c3d4e5f6789012345",
+        senderId: "user_suha123",
+        senderName: "Suha",
+        content: "yes do it, i'll check and add some screens too",
+        type: "text",
+        status: "delivered",
+        isDeleted: false,
+        isEdited: false,
+        createdAt: "2024-12-20T20:15:00Z",
+        updatedAt: "2024-12-20T20:15:00Z"
+      },
+      {
+        _id: "msg_004",
+        channelId: "675a1b2c3d4e5f6789012345",
+        senderId: "user_current",
+        senderName: "You",
+        content: "Oh yes you're right it would be best to do that tbh. alright lets do it on my ipad then, ill share screen on it",
+        type: "text",
+        status: "delivered",
+        isDeleted: false,
+        isEdited: false,
+        createdAt: "2024-12-20T20:16:00Z",
+        updatedAt: "2024-12-20T20:16:00Z"
+      },
+      {
+        _id: "msg_005",
+        channelId: "675a1b2c3d4e5f6789012345",
+        senderId: "user_yahya123",
+        senderName: "Yahya",
+        content: "Sure, why dont you give me a couple of minutes and we can begin? i just have some things to take care of first.",
+        type: "text",
+        status: "delivered",
+        isDeleted: false,
+        isEdited: false,
+        createdAt: "2024-12-20T20:17:00Z",
+        updatedAt: "2024-12-20T20:17:00Z"
+      }
     ],
-    members: ["Yahya", "Suha", "Aisha", "You"],
-    owner: "Suha",
-    admins: ["Suha", "You"],
+    members: [
+      {
+        _id: "member_001",
+        channelId: "675a1b2c3d4e5f6789012345",
+        userId: "user_yahya123",
+        userName: "Yahya",
+        isActive: true,
+        joinedAt: "2024-12-20T10:00:00Z"
+      },
+      {
+        _id: "member_002",
+        channelId: "675a1b2c3d4e5f6789012345",
+        userId: "user_suha123",
+        userName: "Suha",
+        isActive: true,
+        joinedAt: "2024-12-20T10:00:00Z"
+      },
+      {
+        _id: "member_003",
+        channelId: "675a1b2c3d4e5f6789012345",
+        userId: "user_aisha123",
+        userName: "Aisha",
+        isActive: true,
+        joinedAt: "2024-12-20T10:00:00Z"
+      },
+      {
+        _id: "member_004",
+        channelId: "675a1b2c3d4e5f6789012345",
+        userId: "user_current",
+        userName: "You",
+        isActive: true,
+        joinedAt: "2024-12-20T10:00:00Z"
+      }
+    ]
   },
   {
-    id: 2,
+    _id: "675a1b2c3d4e5f6789012346",
+    organizationId: "org_123456789",
     name: "Frontend",
+    type: "public",
+    ownerId: "user_yahya123",
+    ownerName: "Yahya",
+    isArchived: false,
+    createdAt: "2024-12-20T09:00:00Z",
+    updatedAt: "2024-12-20T17:45:00Z",
     lastMessage: "So far the frontend, we are using Re...",
-    time: "5:45 pm",
-    unread: 5,
+    lastMessageTime: "5:45 pm",
+    unreadCount: 5,
     messages: [],
-    members: ["Yahya", "You"],
-    owner: "Yahya",
-    admins: ["Yahya"],
+    members: [
+      {
+        _id: "member_005",
+        channelId: "675a1b2c3d4e5f6789012346",
+        userId: "user_yahya123",
+        userName: "Yahya",
+        isActive: true,
+        joinedAt: "2024-12-20T09:00:00Z"
+      },
+      {
+        _id: "member_006",
+        channelId: "675a1b2c3d4e5f6789012346",
+        userId: "user_current",
+        userName: "You",
+        isActive: true,
+        joinedAt: "2024-12-20T09:00:00Z"
+      }
+    ]
   },
   {
-    id: 3,
+    _id: "675a1b2c3d4e5f6789012347",
+    organizationId: "org_123456789",
     name: "Yahya",
+    type: "private",
+    ownerId: "user_yahya123",
+    ownerName: "Yahya",
+    isArchived: false,
+    createdAt: "2024-12-20T08:00:00Z",
+    updatedAt: "2024-12-20T17:45:00Z",
     lastMessage: "Sure, why dont you give me a co...",
-    time: "5:45 pm",
-    unread: 0,
+    lastMessageTime: "5:45 pm",
+    unreadCount: 0,
     messages: [
-      { sender: "Yahya", text: "Sure, why dont you give me a couple of minutes and we can begin? i just have some things to take care of first.", time: "5:45 pm" },
+      {
+        _id: "msg_006",
+        channelId: "675a1b2c3d4e5f6789012347",
+        senderId: "user_yahya123",
+        senderName: "Yahya",
+        content: "Sure, why dont you give me a couple of minutes and we can begin? i just have some things to take care of first.",
+        type: "text",
+        status: "delivered",
+        isDeleted: false,
+        isEdited: false,
+        createdAt: "2024-12-20T17:45:00Z",
+        updatedAt: "2024-12-20T17:45:00Z"
+      }
     ],
-    members: ["Yahya", "You"],
-    owner: "Yahya",
-    admins: ["Yahya"],
-  },
+    members: [
+      {
+        _id: "member_007",
+        channelId: "675a1b2c3d4e5f6789012347",
+        userId: "user_yahya123",
+        userName: "Yahya",
+        isActive: true,
+        joinedAt: "2024-12-20T08:00:00Z"
+      },
+      {
+        _id: "member_008",
+        channelId: "675a1b2c3d4e5f6789012347",
+        userId: "user_current",
+        userName: "You",
+        isActive: true,
+        joinedAt: "2024-12-20T08:00:00Z"
+      }
+    ]
+  }
 ];
+
+// Current user constant for consistency
+const CURRENT_USER = {
+  id: "user_current",
+  name: "You"
+};
 
 // Workplace members for autocomplete
 const WORKPLACE_MEMBERS = [
@@ -87,11 +271,25 @@ const Chats: React.FC = () => {
   const [memberInput, setMemberInput] = useState("");
   const [memberSuggestion, setMemberSuggestion] = useState<string | null>(null);
   const [chats, setChats] = useState<Chat[]>(dummyChats);
-  const [chatType, setChatType] = useState<'group' | 'private'>('group'); // NEW: Chat type state
+  const [chatType, setChatType] = useState<'public' | 'private'>('public');
+
+  // Helper functions to work with backend-compatible data
+  const getChatMembers = (chat: Chat): string[] => {
+    return chat.members?.map(member => member.userName) || [];
+  };
+
+  const isCurrentUserOwner = (chat: Chat): boolean => {
+    return chat.ownerId === CURRENT_USER.id;
+  };
+
+  const isCurrentUserAdmin = (chat: Chat): boolean => {
+    // In backend, we'll need to track admin status differently
+    // For now, owner is considered admin
+    return chat.ownerId === CURRENT_USER.id;
+  };
 
   const handleAddMember = () => {
     const trimmed = memberInput.trim();
-    // Only add if it's a valid workplace member and not already added
     if (
       trimmed &&
       WORKPLACE_MEMBERS.includes(trimmed) &&
@@ -104,35 +302,82 @@ const Chats: React.FC = () => {
   };
 
   const handleCreateChat = () => {
-    if (chatType === 'group') {
+    if (chatType === 'public') {
       if (!newChatName.trim() || newChatMembers.length === 0) return;
-      const creator = "You"; // In real app, this would be the logged-in user
+      
+      const newChatId = `chat_${Date.now()}`;
       const newChat: Chat = {
-        id: Date.now(),
+        _id: newChatId,
+        organizationId: "org_123456789", // This would come from context
         name: newChatName,
+        type: "public",
+        ownerId: CURRENT_USER.id,
+        ownerName: CURRENT_USER.name,
+        isArchived: false,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
         lastMessage: "",
-        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        unread: 0,
+        lastMessageTime: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        unreadCount: 0,
         messages: [],
-        members: [creator, ...newChatMembers.filter(m => m !== creator)],
-        owner: creator,
-        admins: [creator],
+        members: [
+          {
+            _id: `member_${Date.now()}`,
+            channelId: newChatId,
+            userId: CURRENT_USER.id,
+            userName: CURRENT_USER.name,
+            isActive: true,
+            joinedAt: new Date().toISOString()
+          },
+          ...newChatMembers.filter(m => m !== CURRENT_USER.name).map((memberName, index) => ({
+            _id: `member_${Date.now()}_${index}`,
+            channelId: newChatId,
+            userId: `user_${memberName.toLowerCase()}`,
+            userName: memberName,
+            isActive: true,
+            joinedAt: new Date().toISOString()
+          }))
+        ]
       };
       setChats([newChat, ...chats]);
       setSelectedChat(newChat);
     } else if (chatType === 'private') {
-      if (newChatMembers.length !== 1) return; // Ensure only one member is selected
+      if (newChatMembers.length !== 1) return;
+      
       const memberName = newChatMembers[0];
+      const newChatId = `chat_${Date.now()}`;
       const newChat: Chat = {
-        id: Date.now(),
-        name: memberName, // Use the member's name as the chat name
+        _id: newChatId,
+        organizationId: "org_123456789",
+        name: memberName,
+        type: "private",
+        ownerId: CURRENT_USER.id,
+        ownerName: CURRENT_USER.name,
+        isArchived: false,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
         lastMessage: "",
-        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        unread: 0,
+        lastMessageTime: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        unreadCount: 0,
         messages: [],
-        members: ["You", memberName],
-        owner: "You",
-        admins: ["You"],
+        members: [
+          {
+            _id: `member_${Date.now()}`,
+            channelId: newChatId,
+            userId: CURRENT_USER.id,
+            userName: CURRENT_USER.name,
+            isActive: true,
+            joinedAt: new Date().toISOString()
+          },
+          {
+            _id: `member_${Date.now()}_1`,
+            channelId: newChatId,
+            userId: `user_${memberName.toLowerCase()}`,
+            userName: memberName,
+            isActive: true,
+            joinedAt: new Date().toISOString()
+          }
+        ]
       };
       setChats([newChat, ...chats]);
       setSelectedChat(newChat);
@@ -146,7 +391,7 @@ const Chats: React.FC = () => {
   const addFilteredSuggestions = WORKPLACE_MEMBERS.filter(
     (m: string) =>
       m.toLowerCase().includes(addMemberInput.toLowerCase()) &&
-      !selectedChat.members.includes(m)
+      !getChatMembers(selectedChat).includes(m)
   );
 
   const handleAddMemberToGroup = () => {
@@ -154,45 +399,39 @@ const Chats: React.FC = () => {
     if (
       trimmed &&
       WORKPLACE_MEMBERS.includes(trimmed) &&
-      !selectedChat.members.includes(trimmed)
+      !getChatMembers(selectedChat).includes(trimmed)
     ) {
+      const newMember: ChannelMember = {
+        _id: `member_${Date.now()}`,
+        channelId: selectedChat._id,
+        userId: `user_${trimmed.toLowerCase()}`,
+        userName: trimmed,
+        isActive: true,
+        joinedAt: new Date().toISOString()
+      };
+
       setChats((chats) => chats.map((chat) =>
-        chat.id === selectedChat.id
-          ? { ...chat, members: [...chat.members, trimmed] }
+        chat._id === selectedChat._id
+          ? { ...chat, members: [...(chat.members || []), newMember] }
           : chat
       ));
-      setSelectedChat((chat) => ({ ...chat, members: [...chat.members, trimmed] }));
+      setSelectedChat((chat) => ({ ...chat, members: [...(chat.members || []), newMember] }));
       setAddMemberInput("");
       setAddMemberSuggestion(null);
     }
   };
 
-  const handleRemoveMember = (member: string) => {
+  const handleRemoveMember = (memberName: string) => {
     setChats(chats =>
       chats.map(chat =>
-        chat.id === selectedChat.id
-          ? { ...chat, members: chat.members.filter(m => m !== member), admins: chat.admins.filter(a => a !== member) }
+        chat._id === selectedChat._id
+          ? { ...chat, members: chat.members?.filter(m => m.userName !== memberName) }
           : chat
       )
     );
     setSelectedChat(chat => ({
       ...chat,
-      members: chat.members.filter(m => m !== member),
-      admins: chat.admins.filter(a => a !== member),
-    }));
-  };
-
-  const handleMakeAdmin = (member: string) => {
-    setChats(chats =>
-      chats.map(chat =>
-        chat.id === selectedChat.id
-          ? { ...chat, admins: [...chat.admins, member] }
-          : chat
-      )
-    );
-    setSelectedChat(chat  => ({
-      ...chat,
-      admins: [...chat.admins, member],
+      members: chat.members?.filter(m => m.userName !== memberName),
     }));
   };
 
@@ -216,7 +455,7 @@ const Chats: React.FC = () => {
   const handleChatClick = (chat: Chat) => {
     setChats((prevChats) =>
       prevChats.map((c) =>
-        c.id === chat.id ? { ...c, unread: 0 } : c // Reset unread count for the clicked chat
+        c._id === chat._id ? { ...c, unreadCount: 0 } : c
       )
     );
     setSelectedChat(chat);
@@ -260,8 +499,8 @@ const Chats: React.FC = () => {
             stroke="currentColor"
             className="w-5 h-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
           >
-            <circle cx="11" cy="11" r="7" stroke="currentColor" strokeWidth="2" /> {/* Full circle */}
-            <line x1="16" y1="16" x2="21" y2="21" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /> {/* Handle */}
+            <circle cx="11" cy="11" r="7" stroke="currentColor" strokeWidth="2" />
+            <line x1="16" y1="16" x2="21" y2="21" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
           </svg>
           <input
             type="text"
@@ -273,10 +512,10 @@ const Chats: React.FC = () => {
         </div>
         <div className="flex-1 overflow-y-auto">
           {filteredChats.map((chat) => (
-            <FadeContent key={chat.id} delay={150} duration={800}>
+            <FadeContent key={chat._id} delay={150} duration={800}>
               <div
-                className={`flex items-center px-6 py-3 cursor-pointer transition-colors ${selectedChat.id === chat.id ? 'bg-gray-100' : 'hover:bg-gray-50'}`}
-                onClick={() => handleChatClick(chat)} // Use the updated click handler
+                className={`flex items-center px-6 py-3 cursor-pointer transition-colors ${selectedChat._id === chat._id ? 'bg-gray-100' : 'hover:bg-gray-50'}`}
+                onClick={() => handleChatClick(chat)}
               >
                 <div className="bg-purple-400 rounded-full w-8 h-8 flex items-center justify-center text-md font-bold text-white mr-4">
                   {chat.name[0]}
@@ -286,10 +525,10 @@ const Chats: React.FC = () => {
                   <div className="text-xs text-gray-500 truncate">{chat.lastMessage}</div>
                 </div>
                 <div className="flex flex-col items-end ml-4 min-w-[48px]">
-                  <span className="text-xs text-gray-400 mb-1">{chat.time}</span>
-                  {chat.unread > 0 && ( // Only show the unread badge if there are new messages
+                  <span className="text-xs text-gray-400 mb-1">{chat.lastMessageTime}</span>
+                  {(chat.unreadCount || 0) > 0 && (
                     <span className="bg-purple-600 text-white text-xs rounded-full px-2 py-0.5 font-bold shadow mt-0.5">
-                      {chat.unread}
+                      {chat.unreadCount}
                     </span>
                   )}
                 </div>
@@ -297,6 +536,7 @@ const Chats: React.FC = () => {
             </FadeContent>
           ))}
         </div>
+        
         {/* Create Chat Modal */}
         {showCreateModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
@@ -309,8 +549,8 @@ const Chats: React.FC = () => {
                 <div className="flex gap-4">
                   <button
                     type="button"
-                    className={`px-4 py-2 rounded-lg font-semibold ${chatType === 'group' ? 'bg-purple-600 text-white' : 'bg-gray-200 text-gray-700'}`}
-                    onClick={() => setChatType('group')}
+                    className={`px-4 py-2 rounded-lg font-semibold ${chatType === 'public' ? 'bg-purple-600 text-white' : 'bg-gray-200 text-gray-700'}`}
+                    onClick={() => setChatType('public')}
                   >
                     Group
                   </button>
@@ -324,7 +564,7 @@ const Chats: React.FC = () => {
                 </div>
               </div>
               {/* Group Chat Name Input */}
-              {chatType === 'group' && (
+              {chatType === 'public' && (
                 <div className="mb-3">
                   <label className="block text-sm font-semibold mb-1">Chat Name</label>
                   <input
@@ -358,7 +598,7 @@ const Chats: React.FC = () => {
                       }
                     }}
                     autoComplete="off"
-                    disabled={chatType === 'private' && newChatMembers.length === 1} // Disable input if private chat already has one member
+                    disabled={chatType === 'private' && newChatMembers.length === 1}
                   />
                   {/* Suggestions dropdown */}
                   {memberInput && filteredSuggestions.length > 0 && (
@@ -383,7 +623,7 @@ const Chats: React.FC = () => {
                     disabled={
                       !WORKPLACE_MEMBERS.includes(memberInput.trim()) ||
                       newChatMembers.includes(memberInput.trim()) ||
-                      (chatType === 'private' && newChatMembers.length === 1) // Prevent adding more than one member for private chat
+                      (chatType === 'private' && newChatMembers.length === 1)
                     }
                   >
                     Add
@@ -419,7 +659,7 @@ const Chats: React.FC = () => {
                   type="button"
                   className="px-4 py-2 rounded bg-purple-600 hover:bg-purple-700 text-white font-semibold"
                   onClick={handleCreateChat}
-                  disabled={(chatType === 'group' && (!newChatName.trim() || newChatMembers.length === 0)) || (chatType === 'private' && newChatMembers.length !== 1)}
+                  disabled={(chatType === 'public' && (!newChatName.trim() || newChatMembers.length === 0)) || (chatType === 'private' && newChatMembers.length !== 1)}
                 >Create</button>
               </div>
             </div>
@@ -431,7 +671,7 @@ const Chats: React.FC = () => {
       <FadeContent className="flex-1 flex flex-col bg-[#fcfbff] h-full min-h-0 relative" delay={200}>
         <div
           className="flex items-center p-6 border-b border-gray-200 cursor-pointer select-none"
-          onClick={() => setShowMembersModal(true)} // Ensure this sets the state to true
+          onClick={() => setShowMembersModal(true)}
         >
           <div className="bg-purple-400 rounded-full w-10 h-10 flex items-center justify-center text-lg font-bold text-white mr-4">
             {selectedChat.name[0]}
@@ -439,20 +679,20 @@ const Chats: React.FC = () => {
           <div>
             <div className="text-2xl font-bold">{selectedChat.name}</div>
             {/* Group members inline display */}
-            {selectedChat.members.length > 2 && (
+            {getChatMembers(selectedChat).length > 2 && (
               <div className="text-xs text-gray-500 mt-1">
-                {selectedChat.members.slice(0, 5).join(", ")}
-                {selectedChat.members.length > 5 && (
+                {getChatMembers(selectedChat).slice(0, 5).join(", ")}
+                {getChatMembers(selectedChat).length > 5 && (
                   <>
                     {", "}
                     <span
                       className="underline cursor-pointer hover:text-purple-600"
                       onClick={(e) => {
-                        e.stopPropagation(); // Prevent header click from closing the modal
-                        setShowMembersModal(true); // Ensure modal opens when clicking "and more"
+                        e.stopPropagation();
+                        setShowMembersModal(true);
                       }}
                     >
-                      and {selectedChat.members.length - 5} more
+                      and {getChatMembers(selectedChat).length - 5} more
                     </span>
                   </>
                 )}
@@ -460,20 +700,21 @@ const Chats: React.FC = () => {
             )}
           </div>
         </div>
+        
         {/* Members Modal */}
         {showMembersModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
             <div className="bg-white rounded-xl shadow-xl p-8 min-w-[340px] relative">
               <button
                 className="absolute top-2 right-2 text-gray-400 hover:text-gray-600 text-xl"
-                onClick={() => setShowMembersModal(false)} // Close modal
+                onClick={() => setShowMembersModal(false)}
               >
                 &times;
               </button>
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-xl font-bold">Group Members</h2>
                 {/* Add member button in modal */}
-                {selectedChat.owner === "You" || selectedChat.admins.includes("You") ? (
+                {isCurrentUserOwner(selectedChat) && (
                   <button
                     className="w-8 h-8 rounded-full flex items-center justify-center bg-purple-600 hover:bg-purple-700 text-white text-lg font-bold shadow ml-2"
                     title="Add member"
@@ -481,44 +722,26 @@ const Chats: React.FC = () => {
                   >
                     +
                   </button>
-                ) : null}
+                )}
               </div>
               {/* Owner at top */}
               <div className="flex items-center gap-2 mb-2">
-                <span className="font-bold text-purple-700">{selectedChat.owner}</span>
+                <span className="font-bold text-purple-700">{selectedChat.ownerName}</span>
                 <span className="bg-yellow-300 text-yellow-900 rounded px-2 py-0.5 text-xs font-semibold">Owner</span>
-                {selectedChat.admins.includes(selectedChat.owner) && (
-                  <span className="bg-purple-200 text-purple-700 rounded px-2 py-0.5 text-xs ml-1">Admin</span>
-                )}
               </div>
               {/* Other members */}
               <div className="flex flex-col gap-1">
-                {selectedChat.members.filter((m) => m !== selectedChat.owner).map((member) => (
-                  <div key={member} className="flex items-center gap-2">
-                    <span>{member}</span>
-                    {selectedChat.admins.includes(member) && (
-                      <span className="bg-purple-200 text-purple-700 rounded px-2 py-0.5 text-xs">Admin</span>
-                    )}
-                    {/* Only owner/admin can remove, can't remove owner or yourself */}
-                    {(selectedChat.owner === "You" || selectedChat.admins.includes("You")) &&
-                      member !== selectedChat.owner &&
-                      member !== "You" && (
+                {selectedChat.members?.filter((m) => m.userId !== selectedChat.ownerId).map((member) => (
+                  <div key={member._id} className="flex items-center gap-2">
+                    <span>{member.userName}</span>
+                    {/* Only owner can remove members, can't remove yourself */}
+                    {isCurrentUserOwner(selectedChat) &&
+                      member.userId !== CURRENT_USER.id && (
                         <button
                           className="ml-1 px-2 py-0.5 rounded bg-red-100 hover:bg-red-200 text-red-700 text-xs font-semibold"
-                          onClick={() => handleRemoveMember(member)}
+                          onClick={() => handleRemoveMember(member.userName)}
                         >
                           Remove
-                        </button>
-                      )}
-                    {/* Only owner can make admin, can't make owner admin again */}
-                    {selectedChat.owner === "You" &&
-                      !selectedChat.admins.includes(member) &&
-                      member !== selectedChat.owner && (
-                        <button
-                          className="ml-1 px-2 py-0.5 rounded bg-blue-100 hover:bg-blue-200 text-blue-700 text-xs font-semibold"
-                          onClick={() => handleMakeAdmin(member)}
-                        >
-                          Make Admin
                         </button>
                       )}
                   </div>
@@ -574,7 +797,7 @@ const Chats: React.FC = () => {
                       onClick={handleAddMemberToGroup}
                       disabled={
                         !WORKPLACE_MEMBERS.includes(addMemberInput.trim()) ||
-                        selectedChat.members.includes(addMemberInput.trim())
+                        getChatMembers(selectedChat).includes(addMemberInput.trim())
                       }
                     >Add</button>
                   </div>
@@ -583,32 +806,33 @@ const Chats: React.FC = () => {
             )}
           </div>
         )}
+        
         {/* Centered chat area with whitespace and min height */}
         <div className="flex-1 flex flex-col items-center justify-end overflow-y-auto min-h-0">
-          <div className="w-full max-w-2xl flex flex-col gap-6 px-6 py-8 mx-auto min-h-[450px]"> {/* You can modify the min height of the chat area here */}
-            {selectedChat.messages.length === 0 ? (
+          <div className="w-full max-w-2xl flex flex-col gap-6 px-6 py-8 mx-auto min-h-[450px]">
+            {(!selectedChat.messages || selectedChat.messages.length === 0) ? (
               <FadeContent className="text-gray-400 text-center mt-10" delay={300}>No messages yet.</FadeContent>
             ) : (
               selectedChat.messages.map((msg: Message, idx: number) => (
                 <FadeContent 
-                  key={idx}
-                  className={`flex ${msg.sender === "You" ? "justify-end pl-16" : "justify-start pr-16"}`} // Increased padding for alignment
+                  key={msg._id || idx}
+                  className={`flex ${msg.senderName === "You" ? "justify-end pl-16" : "justify-start pr-16"}`}
                   delay={300 + idx * 50}
                   duration={600}
                 >
                   <div
                     className={`rounded-2xl px-5 py-3 max-w-[70%] text-sm shadow-md border ${
-                      msg.sender === "You"
+                      msg.senderName === "You"
                         ? "bg-white border-gray-300 text-gray-900"
                         : "bg-purple-100 border-purple-200 text-gray-800"
                     }`}
                     style={{wordBreak: 'break-word'}}
                   >
                     {/* Always show sender name above message unless it's 'You' */}
-                    {msg.sender !== "You" && (
-                      <div className="font-bold text-xs mb-1 text-purple-700">{msg.sender}</div>
+                    {msg.senderName !== "You" && (
+                      <div className="font-bold text-xs mb-1 text-purple-700">{msg.senderName}</div>
                     )}
-                    {msg.text}
+                    {msg.content}
                   </div>
                 </FadeContent>
               ))
@@ -617,6 +841,7 @@ const Chats: React.FC = () => {
             <div ref={messagesEndRef} />
           </div>
         </div>
+        
         {/* Message Input - Edge-to-Edge, WhatsApp style */}
         <FadeContent 
           className="flex items-center gap-2 p-4 border-t border-gray-200 bg-white sticky bottom-0 left-0 right-0 z-10 w-full"
@@ -628,12 +853,23 @@ const Chats: React.FC = () => {
             onSubmit={(e: FormEvent<HTMLFormElement>) => {
               e.preventDefault();
               if (message.trim()) {
+                const newMessage: Message = {
+                  _id: `msg_${Date.now()}`,
+                  channelId: selectedChat._id,
+                  senderId: CURRENT_USER.id,
+                  senderName: CURRENT_USER.name,
+                  content: message,
+                  type: "text",
+                  status: "sent",
+                  isDeleted: false,
+                  isEdited: false,
+                  createdAt: new Date().toISOString(),
+                  updatedAt: new Date().toISOString()
+                };
+
                 setSelectedChat((prev: Chat) => ({
                   ...prev,
-                  messages: [
-                    ...prev.messages,
-                    { sender: "You", text: message, time: "Now" },
-                  ],
+                  messages: [...(prev.messages || []), newMessage],
                 }));
                 setMessage("");
               }
@@ -671,7 +907,7 @@ const Chats: React.FC = () => {
                 strokeWidth={2}
                 stroke="currentColor"
                 className="w-6 h-6"
-                style={{ transform: 'translate(1px, 1px)' }} // Adjust horizontal and vertical alignment
+                style={{ transform: 'translate(1px, 1px)' }}
               >
                 <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 19.5l15-7.5-15-7.5v6.75L16.5 12l-12 1.5v6.75z" />
               </svg>
