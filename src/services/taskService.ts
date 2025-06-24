@@ -27,7 +27,7 @@ export interface Task {
   id: string;
   title: string;
   description?: string;
-  status: 'todo' | 'in-progress' | 'done';
+  status: 'todo' | 'in_progress' | 'completed' | 'blocked';
   priority: 'low' | 'medium' | 'high';
   dueDate?: string;
   organizationId: string;
@@ -78,7 +78,7 @@ export interface CreateTaskRequest {
 export interface UpdateTaskRequest {
   title?: string;
   description?: string;
-  status?: 'todo' | 'in-progress' | 'done';
+  status?: 'todo' | 'in_progress' | 'completed' | 'blocked';
   priority?: 'low' | 'medium' | 'high';
   dueDate?: string;
 }
