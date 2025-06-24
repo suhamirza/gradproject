@@ -99,6 +99,13 @@ builder.Services.AddScoped<IVerificationService, VerificationService>();
 
 var app = builder.Build();
 
+// Auto-create database tables on startup
+using (var scope = app.Services.CreateScope())
+{
+    var context = scope.ServiceProvider.GetRequiredService<UserServiceDbContext>();
+    context.Database.Migrate();
+}
+
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
