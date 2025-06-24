@@ -62,19 +62,34 @@ const authMiddleware = require('./middleware/authMiddleware');
 // Socket.IO middleware for JWT validation
 io.use((socket, next) => {
   const token = socket.handshake.auth.token;
+  console.log('🔐 Socket auth attempt, token present:', !!token);
+  
   if (!token) {
+    console.error('❌ Authentication error: No token provided');
     return next(new Error('Authentication error: No token provided'));
   }
 
   try {
+    console.log('🔍 Attempting to verify JWT token...');
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    console.log('✅ JWT token verified successfully');
+    console.log('📋 Token payload:', {
+      nameid: decoded.nameid,
+      unique_name: decoded.unique_name,
+      organizationId: decoded.organizationId,
+      allClaims: Object.keys(decoded)
+    });
+    
     socket.user = {
       id: decoded.nameid,
       username: decoded.unique_name,
       organizationId: decoded.organizationId
     };
+    console.log('👤 Socket user set:', socket.user);
     next();
   } catch (error) {
+    console.error('❌ JWT verification failed:', error.message);
+    console.error('🔍 JWT_SECRET present:', !!process.env.JWT_SECRET);
     return next(new Error('Authentication error: Invalid token'));
   }
 });
@@ -82,6 +97,16 @@ io.use((socket, next) => {
 // Socket.IO connection handling
 io.on('connection', (socket) => {
   console.log('New client connected:', socket.id);
+
+  // Debug: Listen for all events
+  socket.onAny((eventName, ...args) => {
+    console.log(`🎯 Socket event received: ${eventName}`, args);
+  });
+
+  // Add event debugging - log all events received
+  socket.onAny((eventName, ...args) => {
+    console.log(`🎯 Event received: ${eventName}`, args);
+  });
 
   // Handle user joining
   socket.on('join', async () => {
@@ -114,9 +139,9 @@ io.on('connection', (socket) => {
       socket.emit('error', { message: 'Failed to join' });
     }
   });
-
   // Handle joining a specific channel
   socket.on('joinChannel', async ({ channelId }) => {
+    console.log('🏠 joinChannel event received:', { channelId, userId: socket.user.id });
     try {
       const userId = socket.user.id;
 
@@ -150,9 +175,10 @@ io.on('connection', (socket) => {
       socket.emit('error', { message: 'Failed to join channel' });
     }
   });
-
   // Handle chat messages
   socket.on('message', async (data) => {
+    console.log('📨 Message event received:', data);
+    console.log('👤 From user:', socket.user);
     try {
       const { channelId, content, type = 'text' } = data;
       const userId = socket.user.id;

@@ -169,6 +169,7 @@ services:
       - PORT=3003
       - MONGO_CONNECTION=mongodb://chat-mongodb:27017/ChatDB
       - NODE_ENV=development
+      - JWT_SECRET=your-256-bit-secret-key-here-make-it-long-and-secure
     depends_on:
       chat-mongodb:
         condition: service_healthy
