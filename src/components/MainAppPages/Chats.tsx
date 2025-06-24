@@ -512,10 +512,12 @@ const Chats: React.FC = () => {
       console.error('❌ Failed to load chat data:', error);
     }
   };
-
   // Auto-scroll to bottom when messages change
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    // Small delay to ensure DOM is updated
+    setTimeout(() => {
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }, 100);
   }, [selectedChat?.messages]);
   const handleSendMessage = async (e: any) => {
     e.preventDefault();
@@ -756,12 +758,12 @@ const Chats: React.FC = () => {
                   </button>
                 </div>
               </div>
-            </div>
-
-            {/* Messages */}
+            </div>            {/* Messages */}
             <div className="flex-1 overflow-y-auto p-6 space-y-4">
               {selectedChat.messages && selectedChat.messages.length > 0 ? (
-                selectedChat.messages.map((msg) => {
+                selectedChat.messages
+                  .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()) // Sort by timestamp (oldest first)
+                  .map((msg) => {
                   const isOwnMessage = msg.senderId === user?.id || msg.senderName === user?.username || msg.senderName === 'You';
                   
                   return (
