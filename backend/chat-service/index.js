@@ -17,6 +17,7 @@ const {
   getChannelMembers,
   updateMemberStatus,
   sendMessage,
+  getMessage,
   getMessages,
   deleteMessage,
   editMessage,
@@ -117,12 +118,13 @@ io.on('connection', (socket) => {
 
       // Store user connection
       connectedUsers.set(userId, socket.id);
+      connectedUsers.set(username, socket.id);
       socket.userId = userId;
-      socket.organizationId = organizationId;
+      //socket.organizationId = organizationId;
       socket.username = username;
 
       // Get user's channels
-      const channels = await getUserChannels(userId);
+      const channels = await getUserChannels(username); // changed it from userId to username
 
       // Join socket rooms for each channel
       channels.forEach(channel => {
@@ -133,7 +135,7 @@ io.on('connection', (socket) => {
       socket.emit('channels', channels);
 
       // Notify others in the organization
-      socket.to(organizationId).emit('userOnline', { userId });
+      socket.broadcast.emit('userOnline', { userId, username }); //changed it from  socket.to(organizationId).emit('userOnline', { userId });
     } catch (error) {
       console.error('Error in join:', error);
       socket.emit('error', { message: 'Failed to join' });
@@ -152,11 +154,18 @@ io.on('connection', (socket) => {
 
       // Check if user is a member
       const members = await getChannelMembers(channelId);
-      const isMember = members.some(member => member.userId === userId);
+console.log('👥 Channel members:', members.map(m => ({userId: m.userId, userName: m.userName})));
+const username = socket.user.username;
+const isMember = members.some(member => member.userId === userId || member.userName === username);
+console.log('🔍 Membership check - userId:', userId, 'username:', username);
+console.log('🔍 Is member by userId:', members.some(member => member.userId === userId));
+console.log('🔍 Is member by userName:', members.some(member => member.userName === username));
+console.log('🔍 Final membership result:', isMember);
 
-      if (!isMember) {
-        return socket.emit('error', { message: 'Not a member of this channel' });
-      }
+if (!isMember) {
+  console.log('❌ User is not a member of this channel');
+  return socket.emit('error', { message: 'Not a member of this channel' });
+}
 
       // Join the channel room
       socket.join(channelId);
@@ -177,32 +186,45 @@ io.on('connection', (socket) => {
   });
   // Handle chat messages
   socket.on('message', async (data) => {
-    console.log('📨 Message event received:', data);
-    console.log('👤 From user:', socket.user);
-    try {
-      const { channelId, content, type = 'text' } = data;
-      const userId = socket.user.id;
-      const username = socket.user.username;
-      
-      // Send message using chat service
-      const message = await sendMessage(
-        channelId,
-        userId,
-        username,
-        content,
-        type
-      );
+  console.log('📨 Message event received:', data);
+  console.log('👤 From user:', socket.user);
+  try {
+    const { channelId, content, type = 'text' } = data;
+    const userId = socket.user.id;
+    const username = socket.user.username;
+    
+    console.log('💾 Attempting to save message to database...');
+    console.log('📍 Channel ID:', channelId);
+    console.log('👤 User ID:', userId);
+    console.log('📝 Username:', username);
+    console.log('📄 Content:', content);
+    
+    // Send message using chat service
+    const message = await sendMessage(
+      channelId,
+      userId,
+      username,
+      content,
+      type
+    );
 
-      // Broadcast message to channel
-      io.to(channelId).emit('message', {
-        ...message.toObject(),
-        deliveryStatus: 'delivered'
-      });
-    } catch (error) {
-      console.error('Error in message:', error);
-      socket.emit('error', { message: 'Failed to send message' });
-    }
-  });
+    console.log('✅ Message saved successfully:', message._id);
+    console.log('📤 Broadcasting message to channel:', channelId);
+
+    // Broadcast message to channel
+    io.to(channelId).emit('message', {
+      ...message.toObject(),
+      deliveryStatus: 'delivered'
+    });
+    
+    console.log('🚀 Message broadcasted successfully');
+  } catch (error) {
+    console.error('❌ CRITICAL ERROR in message handler:', error);
+    console.error('🔍 Error details:', error.message);
+    console.error('📚 Error stack:', error.stack);
+    socket.emit('error', { message: 'Failed to send message', details: error.message });
+  }
+});
 
   // Handle message read
   socket.on('messageRead', async ({ messageId }) => {
@@ -233,7 +255,8 @@ io.on('connection', (socket) => {
   socket.on('disconnect', () => {
     if (socket.userId) {
       connectedUsers.delete(socket.userId);
-      io.to(socket.organizationId).emit('userOffline', { userId: socket.userId });
+      connectedUsers.delete(socket.username);
+      socket.broadcast.emit('userOffline', { userId: socket.userId, username: socket.username });// changed it from  io.to(socket.organizationId).emit('userOffline', { userId: socket.userId }); 
     }
     console.log('Client disconnected:', socket.id);
   });
@@ -247,10 +270,13 @@ app.get('/health', (req, res) => {
 // Get user's channels
 app.get('/channels', authMiddleware, async (req, res) => {
   try {
-    const userId = req.user.id;
-    const channels = await getUserChannels(userId);
+    const username = req.user.username;  // ← Use username instead!
+    console.log('🔍 REST: Getting channels for username:', username);
+    const channels = await getUserChannels(username);
+    console.log('🔍 REST: Found', channels.length, 'channels');
     res.json(channels);
   } catch (error) {
+    console.error('❌ REST: Failed to get channels:', error);
     res.status(500).json({ error: 'Failed to fetch channels' });
   }
 });
@@ -270,13 +296,60 @@ app.get('/channels/:channelId/messages', authMiddleware, async (req, res) => {
 // Create new channel
 app.post('/channels', authMiddleware, async (req, res) => {
   try {
-    const { name, type, organizationId } = req.body;
+    const { name, type, members } = req.body; // removed organiation id - Yahya // ← Add 'members'
     const ownerId = req.user.id;
     const ownerName = req.user.username;
-    const channel = await createChannel(organizationId, name, type, ownerId, ownerName);
+    
+    // Create the channel
+    const channel = await createChannel(null, name, type, ownerId, ownerName); // Added null instead of organizationId - Yahya
+    
+    // Add other members to the channel
+    if (members && members.length > 0) {
+      for (const memberName of members) {
+        await addChannelMember(channel._id, memberName, memberName);
+      }
+    }
+    
+    // Notify members via socket that they've been added to a new channel
+    if (members && members.length > 0) {
+      members.forEach(memberName => {
+        const memberSocketId = Array.from(connectedUsers.entries())
+          .find(([userId, socketId]) => userId === memberName)?.[1];
+        
+        if (memberSocketId) {
+          io.to(memberSocketId).emit('channelAdded', {
+            channel: channel,
+            addedBy: ownerName
+          });
+        }
+      });
+    }
+    
     res.status(201).json(channel);
   } catch (error) {
+    console.error('Error creating channel:', error);
     res.status(500).json({ error: 'Failed to create channel' });
+  }
+});
+
+app.post('/messages', authMiddleware, async (req, res) => {
+  try {
+    const { channelId, content, type = 'text' } = req.body;
+    const senderId = req.user.id;
+    const senderName = req.user.username;
+    
+    const message = await sendMessage(channelId, senderId, senderName, content, type);
+    
+    // Broadcast to channel via socket
+    io.to(channelId).emit('message', {
+      ...message.toObject(),
+      deliveryStatus: 'delivered'
+    });
+    
+    res.status(201).json(message);
+  } catch (error) {
+    console.error('Error sending message via REST:', error);
+    res.status(500).json({ error: 'Failed to send message' });
   }
 });
 

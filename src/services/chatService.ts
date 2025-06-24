@@ -11,7 +11,7 @@ class ChatService {
   /**
    * Get all channels for the current user's organization
    */
-  async getChannels(organizationId?: string): Promise<Chat[]> {
+  async getChannels(): Promise<Chat[]> {
     try {
       const token = tokenManager.getToken();      // Just get all channels for now, filter by organization on frontend if needed
       const response = await fetch(`${CHAT_SERVICE_URL}/channels`, {
@@ -26,13 +26,12 @@ class ChatService {
         throw new Error(`Failed to fetch channels: ${response.statusText}`);
       }
 
-      const data = await response.json();
-      const channels = data.channels || data;
+      const data = await response.json();      const channels = data.channels || data;
       
-      // Filter by organization on frontend if organizationId provided
-      if (organizationId && Array.isArray(channels)) {
-        return channels.filter(channel => channel.organizationId === organizationId);
-      }
+      // Don't filter by organizationId - return all channels for the user
+      // if (organizationId && Array.isArray(channels)) {
+      //   return channels.filter(channel => channel.organizationId === organizationId);
+      // }
       
       return channels;
     } catch (error) {
@@ -76,7 +75,7 @@ class ChatService {
   /**
    * Create a new channel
    */
-  async createChannel(organizationId: string, name: string, type: 'private' | 'public', members: string[]): Promise<Chat> {
+  async createChannel(organizationId: string | undefined, name: string, type: 'private' | 'public', members: string[]): Promise<Chat> {
     try {
       const token = tokenManager.getToken();
       const response = await fetch(`${CHAT_SERVICE_URL}/channels`, {
@@ -84,9 +83,8 @@ class ChatService {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          organizationId,
+        },        body: JSON.stringify({
+          organizationId: organizationId || null,
           name,
           type,
           members

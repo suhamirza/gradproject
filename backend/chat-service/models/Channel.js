@@ -1,9 +1,8 @@
 const mongoose = require('mongoose');
 
-const channelSchema = new mongoose.Schema({
-  organizationId: {
+const channelSchema = new mongoose.Schema({  organizationId: {
     type: String,
-    required: true,
+    required: false,
     index: true
   },
   name: {

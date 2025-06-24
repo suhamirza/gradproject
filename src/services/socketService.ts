@@ -7,18 +7,19 @@ const CHAT_SERVICE_URL = 'http://localhost:3003';
 class SocketService {
   private socket: Socket | null = null;
   private isConnected: boolean = false;
-
   /**
    * Initialize socket connection with authentication
    */
-  connect(userId: string): Socket | null {
+  connect(userId: string, organizationId?: string): Socket | null {
     if (this.socket && this.isConnected) {
       return this.socket;
     }    const token = tokenManager.getToken();
     if (!token) {
       console.error('No auth token available for socket connection');
       return null;
-    }    // Debug: decode token to see what we're sending
+    }
+
+    console.log('🔌 Connecting socket with:', { userId, organizationId });// Debug: decode token to see what we're sending
     try {
       const tokenParts = token.split('.');
       if (tokenParts.length === 3) {
@@ -43,12 +44,11 @@ class SocketService {
       }
     } catch (e) {
       console.error('Failed to decode token for debugging:', e);
-    }
-
-    try {
+    }    try {
       this.socket = io(CHAT_SERVICE_URL, {
         auth: {
-          token: token
+          token: token,
+          organizationId: organizationId
         },
         transports: ['websocket', 'polling']
       });

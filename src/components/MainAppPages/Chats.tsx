@@ -93,9 +93,8 @@ const Chats: React.FC = () => {
   useEffect(() => {
     const loadChats = async () => {
       try {
-        setLoading(true);
-        // Pass organization ID if available, otherwise get all chats
-        const channels = await chatService.getChannels(currentWorkspace?.id);
+        setLoading(true);        // Pass organization ID if available, otherwise get all chats
+        const channels = await chatService.getChannels(); // Don't pass organizationId
         setChats(channels);
           // IMPORTANT: Join all channels immediately after loading
         const socket = socketService.getSocket();
@@ -160,13 +159,11 @@ const Chats: React.FC = () => {
 
     loadChatData();
   }, [selectedChat?._id]); // Only trigger when selectedChat._id changes
-
   // Set up real-time messaging with WebSocket
   useEffect(() => {
-    if (!user?.id) return;
-
+    if (!user?.id || !currentWorkspace?.id) return;
     console.log('🔌 Setting up real-time messaging...');
-    const socket = socketService.connect(user.id);
+    const socket = socketService.connect(user.id, currentWorkspace?.id);
       if (socket) {      // Listen for new messages - try both event names
       socket.on('new_message', (messageData: Message) => {
         console.log('📨 Received new_message:', messageData.content, 'from:', messageData.senderName);
@@ -226,33 +223,71 @@ const Chats: React.FC = () => {
           }
           return prev;
         });
-      });
-
-      // Listen for message read receipts
+      });      // Listen for message read receipts
       socket.on('message_read', (data: { messageId: string; userId: string }) => {
         console.log('👁️ Message read:', data);
         // You can implement read receipts here if needed
-      });      // Join channels when we have them
+      });
+
+      // Listen for new channels being added
+      socket.on('channelAdded', (data: { channel: Chat; addedBy: string }) => {
+        console.log('📢 Added to new channel:', data.channel.name, 'by:', data.addedBy);
+        
+        // Add the new channel to the chats list
+        setChats(prev => [data.channel, ...prev]);
+        
+        // Auto-join the channel        socket.emit('joinChannel', { channelId: data.channel._id });
+      });
+
+      // Listen for channel messages when joining a channel
+      socket.on('channelMessages', (data: { channelId: string; messages: Message[]; readReceipts: any[] }) => {
+        console.log('📬 Received channel messages:', data.messages.length, 'messages for channel:', data.channelId);
+        
+        // Update the selected chat with the messages if it matches
+        setSelectedChat(prev => {
+          if (prev && prev._id === data.channelId) {
+            console.log('✅ Updating selected chat with', data.messages.length, 'messages');
+            return {
+              ...prev,
+              messages: data.messages
+            };
+          }
+          return prev;
+        });
+        
+        // Also update the chat in the chats array
+        setChats(prev => prev.map(chat => {
+          if (chat._id === data.channelId) {
+            return {
+              ...chat,
+              messages: data.messages,
+              lastMessage: data.messages.length > 0 ? data.messages[data.messages.length - 1].content : '',
+              lastMessageTime: data.messages.length > 0 ? new Date(data.messages[data.messages.length - 1].createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''
+            };
+          }
+          return chat;
+        }));
+      });
+
+      // Join channels when we have them
       if (chats.length > 0) {
-        chats.forEach(chat => {
-          socket.emit('joinChannel', { channelId: chat._id });
+        chats.forEach(chat => {          socket.emit('joinChannel', { channelId: chat._id });
           console.log('🏠 Auto-joined channel on connect:', chat._id, chat.name);
         });
       }
-    }    // Cleanup on unmount
-    return () => {
-      if (socket) {
+    }// Cleanup on unmount
+    return () => {      if (socket) {
         socket.off('new_message');
         socket.off('message');
         socket.off('message_read');
+        socket.off('channelMessages');
+        socket.off('channelAdded');
         socketService.disconnect();
-      }
-    };
-  }, [user?.id]); // Only re-run when user changes  // Join channel when selected chat changes
+      }};
+  }, [user?.id, currentWorkspace?.id]); // Re-run when user or workspace changes// Join channel when selected chat changes
   useEffect(() => {
-    if (selectedChat && user?.id) {
-      const socket = socketService.getSocket();
-      if (socket) {
+    if (selectedChat && user?.id) {      const socket = socketService.getSocket();
+      if (socket && socket.connected) {
         socket.emit('joinChannel', { channelId: selectedChat._id });
         console.log('🏠 Joined channel:', selectedChat._id, selectedChat.name);
         
@@ -336,9 +371,8 @@ const Chats: React.FC = () => {
         const membersToAdd = newChatMembers.filter(member => member !== user?.username);
         
         console.log('🗨️ Creating public chat:', newChatName, 'with members:', membersToAdd);
-        
-        const newChat = await chatService.createChannel(
-          currentWorkspace.id,
+          const newChat = await chatService.createChannel(
+          currentWorkspace?.id,
           newChatName,
           'public',
           membersToAdd // Don't include current user - backend should handle this
@@ -366,7 +400,7 @@ const Chats: React.FC = () => {
         
         const chatName = otherMember; // Use the other person's name
         const newChat = await chatService.createChannel(
-          currentWorkspace.id,
+          currentWorkspace?.id,
           chatName,
           'private',
           [otherMember] // Only include the other person, backend adds creator

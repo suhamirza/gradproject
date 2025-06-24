@@ -211,10 +211,26 @@ async function markAllNotificationsAsRead(userId, channelId) {
 }
 
 // Utility Functions
-async function getUserChannels(userId) {
-  const memberships = await ChannelMember.find({ userId, isActive: true });
+async function getUserChannels(userIdOrName) {
+  console.log('🔍 getUserChannels called with:', userIdOrName);
+  
+  // Try username first (this is what's actually stored)
+  let memberships = await ChannelMember.find({ userName: userIdOrName, isActive: true });
+  console.log('📋 Found by userName:', memberships.length);
+  
+  // If not found, try by userId
+  if (memberships.length === 0) {
+    memberships = await ChannelMember.find({ userId: userIdOrName, isActive: true });
+    console.log('📋 Found by userId:', memberships.length);
+  }
+  
   const channelIds = memberships.map(m => m.channelId);
-  return await Channel.find({ _id: { $in: channelIds } });
+  const channels = await Channel.find({ _id: { $in: channelIds } });
+  console.log('🏠 Returning channels:', channels.length);
+  return channels;
+}
+async function getMessage(messageId) {
+  return await Message.findById(messageId);
 }
 
 async function getChannelStats(channelId) {
@@ -241,6 +257,7 @@ module.exports = {
 
   // Message Operations
   sendMessage,
+  getMessage,
   getMessages,
   deleteMessage,
   editMessage,
