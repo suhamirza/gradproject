@@ -39,14 +39,20 @@ export default function Overview() {
         console.warn('User not loaded yet, waiting...');
       }
     }
-  }, [currentWorkspace, user, setTitle]);// Load organization members
+  }, [currentWorkspace, user, setTitle]);  // Load organization members
   const loadMembers = async () => {
     if (!currentWorkspace?.id || !user?.id) return;
     
     setMembersLoading(true);
     try {
       const response = await organizationService.getOrganizationMembers(currentWorkspace.id);
+      console.log('=== LOAD MEMBERS DEBUG ===');
       console.log('Members API response:', response);
+      console.log('All members with roles:');
+      response.members.forEach(member => {
+        console.log(`- ${member.userName}: ${member.role} (userId: ${member.userId})`);
+      });
+      
       setMembers(response.members);
       
       // Check if current user is admin by finding them in the members list
@@ -56,6 +62,7 @@ export default function Overview() {
       console.log('Current user ID:', user.id);
       console.log('Current user member:', currentUserMember);
       console.log('Is current user admin:', isCurrentUserAdmin);
+      console.log('=== END DEBUG ===');
       
       setIsAdmin(isCurrentUserAdmin || false);
     } catch (error) {

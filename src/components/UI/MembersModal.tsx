@@ -90,8 +90,7 @@ const MembersModal: React.FC<MembersModalProps> = ({
                     }`}>
                       {member.role}
                     </span>
-                    
-                    {isAdmin && member.role !== 'admin' && (
+                      {isAdmin && member.role === 'member' && (
                       <button
                         onClick={() => onRemoveMember(member)}
                         className="text-red-500 hover:text-red-700 text-sm font-medium"

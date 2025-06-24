@@ -26,11 +26,16 @@ const AddMemberModal: React.FC<AddMemberModalProps> = ({ organizationId, onClose
     setLoading(true);
     setError('');    try {
       const { organizationService } = await import('../../services/organizationService');
-      console.log('Attempting to add member:', formData);
+      console.log('=== ADD MEMBER DEBUG ===');
+      console.log('Attempting to add member with data:', formData);
       console.log('Organization ID:', organizationId);
+      console.log('Form role selected:', formData.role);
       
       const response = await organizationService.addOrganizationMember(organizationId, formData);
       console.log('Add member API response:', response);
+      console.log('Member created with role:', response.member?.role);
+      console.log('=== END DEBUG ===');
+      
       onSuccess();
       onClose();
     } catch (err: any) {
