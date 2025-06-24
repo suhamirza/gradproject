@@ -2,7 +2,7 @@ import { io, Socket } from 'socket.io-client';
 import { tokenManager } from './httpClient';
 import type { SocketMessageData, SocketMessageReadData } from '../types/chat';
 
-const CHAT_SERVICE_URL = 'http://localhost:3001';
+const CHAT_SERVICE_URL = 'http://localhost:3003';
 
 class SocketService {
   private socket: Socket | null = null;
@@ -14,12 +14,35 @@ class SocketService {
   connect(userId: string): Socket | null {
     if (this.socket && this.isConnected) {
       return this.socket;
-    }
-
-    const token = tokenManager.getToken();
+    }    const token = tokenManager.getToken();
     if (!token) {
       console.error('No auth token available for socket connection');
       return null;
+    }    // Debug: decode token to see what we're sending
+    try {
+      const tokenParts = token.split('.');
+      if (tokenParts.length === 3) {
+        const payload = JSON.parse(atob(tokenParts[1].replace(/-/g, '+').replace(/_/g, '/')));
+        console.log('🔍 Token payload being sent to socket:', {
+          nameid: payload.nameid,
+          unique_name: payload.unique_name,
+          organizationId: payload.organizationId,
+          userId: payload.userId,
+          id: payload.id,
+          sub: payload.sub,
+          allClaims: Object.keys(payload)
+        });
+        
+        // If the token doesn't have the expected claims, let's try to work around it
+        if (!payload.nameid && (payload.userId || payload.id || payload.sub)) {
+          console.warn('⚠️ Token missing nameid claim, backend may reject connection');
+        }
+        if (!payload.unique_name && payload.username) {
+          console.warn('⚠️ Token missing unique_name claim, backend may reject connection');  
+        }
+      }
+    } catch (e) {
+      console.error('Failed to decode token for debugging:', e);
     }
 
     try {
@@ -65,15 +88,20 @@ class SocketService {
       this.isConnected = false;
       console.log('🔌 Socket disconnected');
     }
-  }
-
-  /**
+  }  /**
    * Join a specific channel
    */
   joinChannel(channelId: string): void {
     if (this.socket && this.isConnected) {
+      console.log('🏠 Emitting joinChannel event:', { channelId });
+      console.log('🔌 Socket connected:', this.socket.connected);
       this.socket.emit('joinChannel', { channelId });
       console.log(`📥 Joined channel: ${channelId}`);
+    } else {
+      console.error('❌ Cannot join channel - socket not connected');
+      console.log('🔌 Socket exists:', !!this.socket);
+      console.log('🔌 Socket connected:', this.socket?.connected);
+      console.log('🔗 isConnected flag:', this.isConnected);
     }
   }
 
@@ -86,18 +114,25 @@ class SocketService {
       console.log(`📤 Left channel: ${channelId}`);
     }
   }
-
   /**
    * Send a message to a channel
    */
   sendMessage(channelId: string, content: string, type: string = 'text'): void {
     if (this.socket && this.isConnected) {
+      console.log('📤 Emitting message event:', { channelId, content, type });
+      console.log('🔌 Socket connected:', this.socket.connected);
+      console.log('🔗 isConnected flag:', this.isConnected);
       this.socket.emit('message', {
         channelId,
         content,
         type
       });
       console.log(`💬 Message sent to channel ${channelId}:`, content);
+    } else {
+      console.error('❌ Cannot send message - socket not connected');
+      console.log('🔌 Socket exists:', !!this.socket);
+      console.log('🔌 Socket connected:', this.socket?.connected);
+      console.log('🔗 isConnected flag:', this.isConnected);
     }
   }
 
@@ -158,12 +193,17 @@ class SocketService {
       this.socket.removeAllListeners();
     }
   }
-
   /**
    * Check if socket is connected
    */
   isSocketConnected(): boolean {
-    return this.isConnected && this.socket?.connected === true;
+    const connected = this.isConnected && this.socket?.connected === true;
+    console.log('🔍 Socket connection check:', {
+      isConnected: this.isConnected,
+      socketConnected: this.socket?.connected,
+      result: connected
+    });
+    return connected;
   }
 
   /**

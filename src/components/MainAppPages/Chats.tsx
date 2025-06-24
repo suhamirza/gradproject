@@ -1,6 +1,11 @@
-import React, { useState, useRef, useEffect } from "react";
-import type { ChangeEvent, FormEvent } from "react";
+// This is the working version with all real backend integration
+import { useState, useRef, useEffect } from "react";
 import FadeContent from "../ReactBits/FadeContent";
+import { chatService } from '../../services/chatService';
+import { socketService } from '../../services/socketService';
+import { useUser } from '../../context/UserContext';
+import { useWorkspace } from '../../context/WorkspaceContext';
+import { organizationService, type OrganizationMember } from '../../services/organizationService';
 
 // Types for chat and message - Backend Compatible
 interface Message {
@@ -45,220 +50,30 @@ interface Chat {
   members?: ChannelMember[];
 }
 
-// Dummy data for demonstration - Backend Compatible
-const dummyChats: Chat[] = [
-  {
-    _id: "675a1b2c3d4e5f6789012345",
-    organizationId: "org_123456789",
-    name: "General",
-    type: "public",
-    ownerId: "user_suha123",
-    ownerName: "Suha",
-    isArchived: false,
-    createdAt: "2024-12-20T10:00:00Z",
-    updatedAt: "2024-12-20T20:13:00Z",
-    lastMessage: "Hey guys, I think that we should...",
-    lastMessageTime: "8:13 pm",
-    unreadCount: 2,
-    messages: [
-      {
-        _id: "msg_001",
-        channelId: "675a1b2c3d4e5f6789012345",
-        senderId: "user_yahya123",
-        senderName: "Yahya",
-        content: "hey suha, i was thinking lets start the frontend work today? we could get a proper headstart and we have a bunch of exams coming up too. if we start now it'll be easier on us",
-        type: "text",
-        status: "delivered",
-        isDeleted: false,
-        isEdited: false,
-        createdAt: "2024-12-20T20:13:00Z",
-        updatedAt: "2024-12-20T20:13:00Z"
-      },
-      {
-        _id: "msg_002",
-        channelId: "675a1b2c3d4e5f6789012345",
-        senderId: "user_current",
-        senderName: "You",
-        content: "Yeah i was thinking the same. shall i begin the design on figma rn then? i can start up the file and send you the link",
-        type: "text",
-        status: "delivered",
-        isDeleted: false,
-        isEdited: false,
-        createdAt: "2024-12-20T20:14:00Z",
-        updatedAt: "2024-12-20T20:14:00Z"
-      },
-      {
-        _id: "msg_003",
-        channelId: "675a1b2c3d4e5f6789012345",
-        senderId: "user_suha123",
-        senderName: "Suha",
-        content: "yes do it, i'll check and add some screens too",
-        type: "text",
-        status: "delivered",
-        isDeleted: false,
-        isEdited: false,
-        createdAt: "2024-12-20T20:15:00Z",
-        updatedAt: "2024-12-20T20:15:00Z"
-      },
-      {
-        _id: "msg_004",
-        channelId: "675a1b2c3d4e5f6789012345",
-        senderId: "user_current",
-        senderName: "You",
-        content: "Oh yes you're right it would be best to do that tbh. alright lets do it on my ipad then, ill share screen on it",
-        type: "text",
-        status: "delivered",
-        isDeleted: false,
-        isEdited: false,
-        createdAt: "2024-12-20T20:16:00Z",
-        updatedAt: "2024-12-20T20:16:00Z"
-      },
-      {
-        _id: "msg_005",
-        channelId: "675a1b2c3d4e5f6789012345",
-        senderId: "user_yahya123",
-        senderName: "Yahya",
-        content: "Sure, why dont you give me a couple of minutes and we can begin? i just have some things to take care of first.",
-        type: "text",
-        status: "delivered",
-        isDeleted: false,
-        isEdited: false,
-        createdAt: "2024-12-20T20:17:00Z",
-        updatedAt: "2024-12-20T20:17:00Z"
-      }
-    ],
-    members: [
-      {
-        _id: "member_001",
-        channelId: "675a1b2c3d4e5f6789012345",
-        userId: "user_yahya123",
-        userName: "Yahya",
-        isActive: true,
-        joinedAt: "2024-12-20T10:00:00Z"
-      },
-      {
-        _id: "member_002",
-        channelId: "675a1b2c3d4e5f6789012345",
-        userId: "user_suha123",
-        userName: "Suha",
-        isActive: true,
-        joinedAt: "2024-12-20T10:00:00Z"
-      },
-      {
-        _id: "member_003",
-        channelId: "675a1b2c3d4e5f6789012345",
-        userId: "user_aisha123",
-        userName: "Aisha",
-        isActive: true,
-        joinedAt: "2024-12-20T10:00:00Z"
-      },
-      {
-        _id: "member_004",
-        channelId: "675a1b2c3d4e5f6789012345",
-        userId: "user_current",
-        userName: "You",
-        isActive: true,
-        joinedAt: "2024-12-20T10:00:00Z"
-      }
-    ]
-  },
-  {
-    _id: "675a1b2c3d4e5f6789012346",
-    organizationId: "org_123456789",
-    name: "Frontend",
-    type: "public",
-    ownerId: "user_yahya123",
-    ownerName: "Yahya",
-    isArchived: false,
-    createdAt: "2024-12-20T09:00:00Z",
-    updatedAt: "2024-12-20T17:45:00Z",
-    lastMessage: "So far the frontend, we are using Re...",
-    lastMessageTime: "5:45 pm",
-    unreadCount: 5,
-    messages: [],
-    members: [
-      {
-        _id: "member_005",
-        channelId: "675a1b2c3d4e5f6789012346",
-        userId: "user_yahya123",
-        userName: "Yahya",
-        isActive: true,
-        joinedAt: "2024-12-20T09:00:00Z"
-      },
-      {
-        _id: "member_006",
-        channelId: "675a1b2c3d4e5f6789012346",
-        userId: "user_current",
-        userName: "You",
-        isActive: true,
-        joinedAt: "2024-12-20T09:00:00Z"
-      }
-    ]
-  },
-  {
-    _id: "675a1b2c3d4e5f6789012347",
-    organizationId: "org_123456789",
-    name: "Yahya",
-    type: "private",
-    ownerId: "user_yahya123",
-    ownerName: "Yahya",
-    isArchived: false,
-    createdAt: "2024-12-20T08:00:00Z",
-    updatedAt: "2024-12-20T17:45:00Z",
-    lastMessage: "Sure, why dont you give me a co...",
-    lastMessageTime: "5:45 pm",
-    unreadCount: 0,
-    messages: [
-      {
-        _id: "msg_006",
-        channelId: "675a1b2c3d4e5f6789012347",
-        senderId: "user_yahya123",
-        senderName: "Yahya",
-        content: "Sure, why dont you give me a couple of minutes and we can begin? i just have some things to take care of first.",
-        type: "text",
-        status: "delivered",
-        isDeleted: false,
-        isEdited: false,
-        createdAt: "2024-12-20T17:45:00Z",
-        updatedAt: "2024-12-20T17:45:00Z"
-      }
-    ],
-    members: [
-      {
-        _id: "member_007",
-        channelId: "675a1b2c3d4e5f6789012347",
-        userId: "user_yahya123",
-        userName: "Yahya",
-        isActive: true,
-        joinedAt: "2024-12-20T08:00:00Z"
-      },
-      {
-        _id: "member_008",
-        channelId: "675a1b2c3d4e5f6789012347",
-        userId: "user_current",
-        userName: "You",
-        isActive: true,
-        joinedAt: "2024-12-20T08:00:00Z"
-      }
-    ]
-  }
-];
-
-// Current user constant for consistency
-const CURRENT_USER = {
-  id: "user_current",
-  name: "You"
-};
-
-// Workplace members for autocomplete
-const WORKPLACE_MEMBERS = [
-  "Yahya", "Suha", "Muhammad", "Vedat", "Aisha", "Fatima", "Bilal", "Zara", "Omar", "Sara", "Keko", "Katoosa", "You"
-];
-
 const Chats: React.FC = () => {
-  const [selectedChat, setSelectedChat] = useState<Chat>(dummyChats[2]); // Default to "Yahya" chat
+  const { user } = useUser();
+  
+  // Use workspace with proper error handling
+  let currentWorkspace = null;
+  let workspaceLoading = false;
+  let workspaceError = null;
+  try {
+    const workspaceContext = useWorkspace();
+    if (workspaceContext && typeof workspaceContext === 'object') {
+      currentWorkspace = (workspaceContext as any).currentWorkspace;
+      workspaceLoading = (workspaceContext as any).isLoading || false;
+      workspaceError = (workspaceContext as any).error;
+    }
+  } catch (error) {
+    console.warn('WorkspaceContext not available:', error);
+    workspaceError = 'Workspace context not available';
+  }
+  
+  const [selectedChat, setSelectedChat] = useState<Chat | null>(null);
   const [search, setSearch] = useState<string>("");
   const [message, setMessage] = useState<string>("");
+  const [loading, setLoading] = useState(true);
+  const [workspaceMembers, setWorkspaceMembers] = useState<OrganizationMember[]>([]);
 
   const [showMembersModal, setShowMembersModal] = useState(false);
   const [showAddMembersModal, setShowAddMembersModal] = useState(false);
@@ -270,30 +85,233 @@ const Chats: React.FC = () => {
   const [newChatMembers, setNewChatMembers] = useState<string[]>([]);
   const [memberInput, setMemberInput] = useState("");
   const [memberSuggestion, setMemberSuggestion] = useState<string | null>(null);
-  const [chats, setChats] = useState<Chat[]>(dummyChats);
+  const [chats, setChats] = useState<Chat[]>([]);
   const [chatType, setChatType] = useState<'public' | 'private'>('public');
 
+  const messagesEndRef = useRef<HTMLDivElement | null>(null);
+  // Load real chats instead of dummy data
+  useEffect(() => {
+    const loadChats = async () => {
+      try {
+        setLoading(true);
+        // Pass organization ID if available, otherwise get all chats
+        const channels = await chatService.getChannels(currentWorkspace?.id);
+        setChats(channels);
+          // IMPORTANT: Join all channels immediately after loading
+        const socket = socketService.getSocket();
+        if (socket && channels.length > 0) {
+          channels.forEach(chat => {
+            socket.emit('joinChannel', { channelId: chat._id });
+            console.log('🔗 Force-joined channel after loading:', chat._id, chat.name);
+          });
+        }
+        
+        // Set first chat as selected if none selected
+        if (channels.length > 0 && !selectedChat) {
+          setSelectedChat(channels[0]);
+        }
+      } catch (error) {
+        console.error('Failed to load chats:', error);
+        // Fallback to empty array instead of dummy data
+        setChats([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadChats();
+  }, [currentWorkspace]);
+
+  // Load messages when a chat is selected
+  useEffect(() => {
+    const loadChatData = async () => {
+      if (!selectedChat) return;
+
+      try {
+        console.log('🔍 Loading chat data for:', selectedChat._id);
+        
+        // Load messages and members in parallel
+        const [messages, members] = await Promise.all([
+          chatService.getMessages(selectedChat._id),
+          chatService.getChannelMembers(selectedChat._id)
+        ]);
+        
+        console.log('💬 Loaded messages:', messages.length);
+        console.log('👥 Loaded members:', members.length);
+        
+        // Update selected chat with loaded data
+        setSelectedChat(prev => prev ? {
+          ...prev,
+          messages: messages,
+          members: members
+        } : null);
+        
+        // Also update the chat in the chats array
+        setChats(prev => prev.map(chat => 
+          chat._id === selectedChat._id 
+            ? { ...chat, messages: messages, members: members }
+            : chat
+        ));
+      } catch (error) {
+        console.error('❌ Failed to load chat data:', error);
+        // Don't show alert for loading failures, just log
+      }
+    };
+
+    loadChatData();
+  }, [selectedChat?._id]); // Only trigger when selectedChat._id changes
+
+  // Set up real-time messaging with WebSocket
+  useEffect(() => {
+    if (!user?.id) return;
+
+    console.log('🔌 Setting up real-time messaging...');
+    const socket = socketService.connect(user.id);
+      if (socket) {      // Listen for new messages - try both event names
+      socket.on('new_message', (messageData: Message) => {
+        console.log('📨 Received new_message:', messageData.content, 'from:', messageData.senderName);
+        
+        // Update chats if the message is for a channel we have
+        setChats(prev => prev.map(chat => {
+          if (chat._id === messageData.channelId) {
+            return {
+              ...chat,
+              messages: [...(chat.messages || []), messageData],
+              lastMessage: messageData.content,
+              lastMessageTime: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+            };
+          }
+          return chat;
+        }));
+
+        // Update selected chat if it's the same channel
+        setSelectedChat(prev => {
+          if (prev && prev._id === messageData.channelId) {
+            return {
+              ...prev,
+              messages: [...(prev.messages || []), messageData]
+            };
+          }
+          return prev;
+        });
+      });      // Also listen for 'message' event in case backend uses that
+      socket.on('message', (messageData: Message) => {
+        console.log('📨 Received message:', messageData.content, 'from:', messageData.senderName);
+        
+        // Update chats if the message is for a channel we have
+        setChats(prev => prev.map(chat => {
+          if (chat._id === messageData.channelId) {
+            return {
+              ...chat,
+              messages: [...(chat.messages || []), messageData],
+              lastMessage: messageData.content,
+              lastMessageTime: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+            };
+          }
+          return chat;
+        }));
+
+        // Update selected chat if it's the same channel
+        setSelectedChat(prev => {
+          if (prev && prev._id === messageData.channelId) {
+            // Remove any temporary messages with the same content and replace with real message
+            const filteredMessages = prev.messages?.filter(msg => 
+              !(msg.status === 'sending' && msg.content === messageData.content)
+            ) || [];
+            
+            return {
+              ...prev,
+              messages: [...filteredMessages, messageData]
+            };
+          }
+          return prev;
+        });
+      });
+
+      // Listen for message read receipts
+      socket.on('message_read', (data: { messageId: string; userId: string }) => {
+        console.log('👁️ Message read:', data);
+        // You can implement read receipts here if needed
+      });      // Join channels when we have them
+      if (chats.length > 0) {
+        chats.forEach(chat => {
+          socket.emit('joinChannel', { channelId: chat._id });
+          console.log('🏠 Auto-joined channel on connect:', chat._id, chat.name);
+        });
+      }
+    }    // Cleanup on unmount
+    return () => {
+      if (socket) {
+        socket.off('new_message');
+        socket.off('message');
+        socket.off('message_read');
+        socketService.disconnect();
+      }
+    };
+  }, [user?.id]); // Only re-run when user changes  // Join channel when selected chat changes
+  useEffect(() => {
+    if (selectedChat && user?.id) {
+      const socket = socketService.getSocket();
+      if (socket) {
+        socket.emit('joinChannel', { channelId: selectedChat._id });
+        console.log('🏠 Joined channel:', selectedChat._id, selectedChat.name);
+        
+        // Also ensure we're listening for messages from this specific channel
+        console.log('👂 Listening for messages on channel:', selectedChat._id);
+      }
+    }
+  }, [selectedChat?._id, user?.id]);
+
+  // Load workspace members from organization
+  useEffect(() => {
+    const loadWorkspaceMembers = async () => {
+      if (!currentWorkspace) return;
+      
+      try {
+        console.log('🔍 Loading workspace members for:', currentWorkspace.id);
+        const response = await organizationService.getOrganizationMembers(currentWorkspace.id);
+        console.log('👥 Loaded workspace members:', response.members);
+        setWorkspaceMembers(response.members);
+      } catch (error) {
+        console.error('❌ Failed to load workspace members:', error);
+        // Fallback to empty array on error
+        setWorkspaceMembers([]);
+      }
+    };
+
+    loadWorkspaceMembers();
+  }, [currentWorkspace]);
+
   // Helper functions to work with backend-compatible data
-  const getChatMembers = (chat: Chat): string[] => {
-    return chat.members?.map(member => member.userName) || [];
+  const getChatMembers = (chat: Chat | null): string[] => {
+    return chat?.members?.map(member => member.userName) || [];
   };
 
-  const isCurrentUserOwner = (chat: Chat): boolean => {
-    return chat.ownerId === CURRENT_USER.id;
+  const isCurrentUserOwner = (chat: Chat | null): boolean => {
+    return chat?.ownerId === user?.id;
   };
 
-  const isCurrentUserAdmin = (chat: Chat): boolean => {
-    // In backend, we'll need to track admin status differently
-    // For now, owner is considered admin
-    return chat.ownerId === CURRENT_USER.id;
-  };
+  // Filtered members for dropdowns (excluding current user and already selected members)
+  const filteredMembersForNewChat = workspaceMembers.filter(m =>
+    m.userName.toLowerCase().includes(memberInput.toLowerCase()) && 
+    !newChatMembers.includes(m.userName) &&
+    m.userName !== user?.username
+  ).sort((a, b) => a.userName.localeCompare(b.userName));
+
+  const filteredMembersForAdd = workspaceMembers.filter(m =>
+    m.userName.toLowerCase().includes(addMemberInput.toLowerCase()) &&
+    selectedChat &&
+    !getChatMembers(selectedChat).includes(m.userName) &&
+    m.userName !== user?.username
+  ).sort((a, b) => a.userName.localeCompare(b.userName));
 
   const handleAddMember = () => {
     const trimmed = memberInput.trim();
     if (
       trimmed &&
-      WORKPLACE_MEMBERS.includes(trimmed) &&
-      !newChatMembers.includes(trimmed)
+      workspaceMembers.some(m => m.userName === trimmed) &&
+      !newChatMembers.includes(trimmed) &&
+      trimmed !== user?.username // Prevent adding self
     ) {
       setNewChatMembers([...newChatMembers, trimmed]);
       setMemberInput("");
@@ -301,620 +319,814 @@ const Chats: React.FC = () => {
     }
   };
 
-  const handleCreateChat = () => {
-    if (chatType === 'public') {
-      if (!newChatName.trim() || newChatMembers.length === 0) return;
-      
-      const newChatId = `chat_${Date.now()}`;
-      const newChat: Chat = {
-        _id: newChatId,
-        organizationId: "org_123456789", // This would come from context
-        name: newChatName,
-        type: "public",
-        ownerId: CURRENT_USER.id,
-        ownerName: CURRENT_USER.name,
-        isArchived: false,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        lastMessage: "",
-        lastMessageTime: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        unreadCount: 0,
-        messages: [],
-        members: [
-          {
-            _id: `member_${Date.now()}`,
-            channelId: newChatId,
-            userId: CURRENT_USER.id,
-            userName: CURRENT_USER.name,
-            isActive: true,
-            joinedAt: new Date().toISOString()
-          },
-          ...newChatMembers.filter(m => m !== CURRENT_USER.name).map((memberName, index) => ({
-            _id: `member_${Date.now()}_${index}`,
-            channelId: newChatId,
-            userId: `user_${memberName.toLowerCase()}`,
-            userName: memberName,
-            isActive: true,
-            joinedAt: new Date().toISOString()
-          }))
-        ]
-      };
-      setChats([newChat, ...chats]);
-      setSelectedChat(newChat);
-    } else if (chatType === 'private') {
-      if (newChatMembers.length !== 1) return;
-      
-      const memberName = newChatMembers[0];
-      const newChatId = `chat_${Date.now()}`;
-      const newChat: Chat = {
-        _id: newChatId,
-        organizationId: "org_123456789",
-        name: memberName,
-        type: "private",
-        ownerId: CURRENT_USER.id,
-        ownerName: CURRENT_USER.name,
-        isArchived: false,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        lastMessage: "",
-        lastMessageTime: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        unreadCount: 0,
-        messages: [],
-        members: [
-          {
-            _id: `member_${Date.now()}`,
-            channelId: newChatId,
-            userId: CURRENT_USER.id,
-            userName: CURRENT_USER.name,
-            isActive: true,
-            joinedAt: new Date().toISOString()
-          },
-          {
-            _id: `member_${Date.now()}_1`,
-            channelId: newChatId,
-            userId: `user_${memberName.toLowerCase()}`,
-            userName: memberName,
-            isActive: true,
-            joinedAt: new Date().toISOString()
-          }
-        ]
-      };
-      setChats([newChat, ...chats]);
-      setSelectedChat(newChat);
+  const handleCreateChat = async () => {
+    if (!currentWorkspace) {
+      alert('Please select a workspace first');
+      return;
     }
-    setShowCreateModal(false);
-    setNewChatName("");
-    setNewChatMembers([]);
-    setMemberInput("");
+    
+    try {
+      if (chatType === 'public') {
+        if (!newChatName.trim()) {
+          alert('Please enter a chat name');
+          return;
+        }
+        
+        // Backend should automatically add the creator, so we don't include them
+        const membersToAdd = newChatMembers.filter(member => member !== user?.username);
+        
+        console.log('🗨️ Creating public chat:', newChatName, 'with members:', membersToAdd);
+        
+        const newChat = await chatService.createChannel(
+          currentWorkspace.id,
+          newChatName,
+          'public',
+          membersToAdd // Don't include current user - backend should handle this
+        );
+        
+        setChats([newChat, ...chats]);
+        setShowCreateModal(false);
+        setNewChatName('');
+        setNewChatMembers([]);
+        setChatType('public');
+      } else {
+        // Private chat - create with selected members
+        if (newChatMembers.length !== 1) {
+          alert('Private chats must have exactly 1 other member');
+          return;
+        }
+        
+        const otherMember = newChatMembers[0];
+        if (otherMember === user?.username) {
+          alert('You cannot create a private chat with yourself');
+          return;
+        }
+        
+        console.log('🗨️ Creating private chat with:', otherMember);
+        
+        const chatName = otherMember; // Use the other person's name
+        const newChat = await chatService.createChannel(
+          currentWorkspace.id,
+          chatName,
+          'private',
+          [otherMember] // Only include the other person, backend adds creator
+        );
+        
+        setChats([newChat, ...chats]);
+        setShowCreateModal(false);
+        setNewChatName('');
+        setNewChatMembers([]);
+        setChatType('public');
+      }
+    } catch (error) {
+      console.error('Failed to create chat:', error);
+      alert('Failed to create chat. Please try again.');
+    }
   };
 
-  const addFilteredSuggestions = WORKPLACE_MEMBERS.filter(
-    (m: string) =>
-      m.toLowerCase().includes(addMemberInput.toLowerCase()) &&
-      !getChatMembers(selectedChat).includes(m)
-  );
-
-  const handleAddMemberToGroup = () => {
+  const handleAddChatMember = async () => {
     const trimmed = addMemberInput.trim();
     if (
       trimmed &&
-      WORKPLACE_MEMBERS.includes(trimmed) &&
+      workspaceMembers.some(m => m.userName === trimmed) &&
+      selectedChat &&
       !getChatMembers(selectedChat).includes(trimmed)
     ) {
-      const newMember: ChannelMember = {
-        _id: `member_${Date.now()}`,
-        channelId: selectedChat._id,
-        userId: `user_${trimmed.toLowerCase()}`,
-        userName: trimmed,
-        isActive: true,
-        joinedAt: new Date().toISOString()
-      };
+      try {
+        await chatService.addMember(selectedChat._id, trimmed);
+        
+        // Update local state
+        const newMember: ChannelMember = {
+          _id: `member_${Date.now()}`,
+          channelId: selectedChat._id,
+          userId: `user_${trimmed.toLowerCase()}`,
+          userName: trimmed,
+          isActive: true,
+          joinedAt: new Date().toISOString()
+        };
 
-      setChats((chats) => chats.map((chat) =>
-        chat._id === selectedChat._id
-          ? { ...chat, members: [...(chat.members || []), newMember] }
-          : chat
-      ));
-      setSelectedChat((chat) => ({ ...chat, members: [...(chat.members || []), newMember] }));
-      setAddMemberInput("");
-      setAddMemberSuggestion(null);
+        const updatedChats = chats.map(chat =>
+          chat._id === selectedChat._id
+            ? { ...chat, members: [...(chat.members || []), newMember] }
+            : chat
+        );
+        setChats(updatedChats);
+        
+        setSelectedChat({ ...selectedChat, members: [...(selectedChat.members || []), newMember] });
+        
+        setAddMemberInput("");
+        setAddMemberSuggestion(null);
+        setShowAddMembersModal(false);
+      } catch (error) {
+        console.error('Failed to add member:', error);
+        alert('Failed to add member. Please try again.');
+      }
     }
   };
 
-  const handleRemoveMember = (memberName: string) => {
-    setChats(chats =>
-      chats.map(chat =>
+  const handleRemoveChatMember = async (memberName: string) => {
+    if (!selectedChat) return;
+    
+    try {
+      await chatService.removeMember(selectedChat._id, memberName);
+      
+      // Update local state
+      const updatedChats = chats.map(chat =>
         chat._id === selectedChat._id
           ? { ...chat, members: chat.members?.filter(m => m.userName !== memberName) }
           : chat
-      )
-    );
-    setSelectedChat(chat => ({
-      ...chat,
-      members: chat.members?.filter(m => m.userName !== memberName),
-    }));
-  };
-
-  const filteredChats = chats.filter((chat) =>
-    chat.name.toLowerCase().includes(search.toLowerCase())
-  );
-
-  const filteredSuggestions = WORKPLACE_MEMBERS.filter(
-    m =>
-      m.toLowerCase().includes(memberInput.toLowerCase()) &&
-      !newChatMembers.includes(m)
-  );
-
-  const handleSelectSuggestion = (suggestion: string) => {
-    setMemberInput(suggestion);
-    setMemberSuggestion(suggestion);
-  };
-
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-
-  const handleChatClick = (chat: Chat) => {
-    setChats((prevChats) =>
-      prevChats.map((c) =>
-        c._id === chat._id ? { ...c, unreadCount: 0 } : c
-      )
-    );
+      );
+      setChats(updatedChats);
+      
+      setSelectedChat({
+        ...selectedChat,
+        members: selectedChat.members?.filter(m => m.userName !== memberName),
+      });
+    } catch (error) {
+      console.error('Failed to remove member:', error);
+      alert('Failed to remove member. Please try again.');
+    }
+  };  // Handle chat selection
+  const handleChatSelect = async (chat: Chat) => {
+    console.log('🎯 Selecting chat:', chat.name, chat._id);
     setSelectedChat(chat);
+    
+    // Join the channel via socket
+    const socket = socketService.getSocket();
+    if (socket && socketService.isSocketConnected()) {
+      console.log('🏠 Joining channel via socketService:', chat._id);
+      socketService.joinChannel(chat._id);
+    } else {
+      console.warn('❌ Cannot join channel - socket not connected');
+    }
+    
+    // Load messages and members for the selected chat
+    try {
+      const [messages, members] = await Promise.all([
+        chatService.getMessages(chat._id),
+        chatService.getChannelMembers(chat._id)
+      ]);
+      
+      setSelectedChat(prev => prev && prev._id === chat._id ? {
+        ...prev,
+        messages: messages || [],
+        members: members || []
+      } : prev);
+      
+      console.log(`📬 Loaded ${messages?.length || 0} messages and ${members?.length || 0} members for chat: ${chat.name}`);
+    } catch (error) {
+      console.error('❌ Failed to load chat data:', error);
+    }
   };
 
-  // Scroll to bottom when messages change
+  // Auto-scroll to bottom when messages change
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [selectedChat.messages]);
+  }, [selectedChat?.messages]);
+  const handleSendMessage = async (e: any) => {
+    e.preventDefault();
+    if (!message.trim() || !selectedChat) return;
+
+    const messageContent = message.trim();
+    setMessage(""); // Clear input immediately for better UX
+
+    // Create temporary message for immediate UI update
+    const tempMessage: Message = {
+      _id: `temp-${Date.now()}`, // Temporary ID that will be replaced
+      channelId: selectedChat._id,
+      senderId: user?.id || 'current-user',
+      senderName: user ? `${user.firstName} ${user.lastName}` : 'You',
+      content: messageContent,
+      type: 'text',
+      status: 'sending',
+      isDeleted: false,
+      isEdited: false,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+
+    // Update UI immediately with temporary message
+    setSelectedChat(prev => prev ? {
+      ...prev,
+      messages: [...(prev.messages || []), tempMessage],
+      lastMessage: messageContent,
+      lastMessageTime: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    } : null);
+
+    try {
+      const socket = socketService.getSocket();
+      console.log('🔍 Debug socket state:');
+      console.log('  - Socket exists:', !!socket);
+      console.log('  - Socket connected:', socket?.connected);
+      console.log('  - isSocketConnected():', socketService.isSocketConnected());
+      
+      if (socket && socketService.isSocketConnected()) {
+        console.log('📡 Sending message via WebSocket...', { channelId: selectedChat._id, content: messageContent });
+        socketService.sendMessage(selectedChat._id, messageContent, 'text');
+        console.log('✅ Message sent via WebSocket (waiting for confirmation)');
+        
+        // Set a timeout to detect if message was not received
+        setTimeout(() => {
+          // Check if the temporary message is still there (not replaced by real message)
+          setSelectedChat(prev => {
+            if (prev && prev.messages?.some(msg => msg._id === tempMessage._id && msg.status === 'sending')) {
+              console.warn('⚠️ Message may not have been delivered - no confirmation received');
+              // Update status to show potential delivery issue
+              return {
+                ...prev,
+                messages: prev.messages.map(msg => 
+                  msg._id === tempMessage._id ? { ...msg, status: 'pending' } : msg
+                )
+              };
+            }
+            return prev;
+          });
+        }, 5000); // 5 second timeout
+        
+      } else {
+        console.error('❌ WebSocket not connected. Cannot send message.');
+        throw new Error('Chat connection failed. Please refresh the page and try again.');
+      }
+    } catch (error) {
+      console.error('❌ Failed to send message:', error);
+      alert(`Failed to send message: ${error instanceof Error ? error.message : 'Please refresh the page and try again.'}`);
+      // Remove the temporary message on failure and restore input
+      setSelectedChat(prev => prev ? {
+        ...prev,
+        messages: prev.messages?.filter(msg => msg._id !== tempMessage._id) || []
+      } : null);
+      setMessage(messageContent); // Restore the message
+    }
+  };
+
+  // Show loading state if workspace is loading
+  if (workspaceLoading) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <div className="text-gray-500">Loading workspace...</div>
+      </div>
+    );
+  }
+
+  // Show error state if workspace failed to load
+  if (workspaceError) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <div className="text-red-500">Error: {workspaceError}</div>
+      </div>
+    );
+  }
+
+  // Show loading state
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <div className="text-gray-500">Loading chats...</div>
+      </div>
+    );
+  }
+
+  // Show empty state if no workspace selected
+  if (!currentWorkspace) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <div className="text-gray-500">Please select a workspace to view chats</div>
+      </div>
+    );
+  }
 
   return (
-    <div className="flex h-full min-h-0" style={{height: '100%'}}>
-      {/* Sidebar Chat List */}
-      <FadeContent className="w-1/3 min-w-[250px] border-r border-gray-300 bg-white flex flex-col h-full min-h-0" delay={100}>
-        {/* Header with Chats title and plus button */}
-        <div className="flex items-center justify-between px-6 py-6 pb-4">
-          <h2 className="text-2xl font-bold">Chats</h2>
-          <button
-            className="w-10 h-10 rounded-full flex items-center justify-center bg-purple-600 hover:bg-purple-700 text-white shadow transition"
-            title="New Chat"
-            onClick={() => setShowCreateModal(true)}
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              strokeWidth={2}
-              stroke="currentColor"
-              className="w-6 h-6"
+    <div className="flex h-full bg-white">
+      {/* Sidebar */}
+      <div className="w-80 border-r border-gray-200 flex flex-col">
+        {/* Header */}
+        <div className="p-6 border-b border-gray-100">
+          <div className="flex items-center justify-between mb-4">
+            <h1 className="text-2xl font-bold text-gray-900">Chats</h1>
+            <button
+              onClick={() => setShowCreateModal(true)}
+              className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors text-sm font-medium"
             >
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+              + New Chat
+            </button>
+          </div>
+          
+          <div className="relative">
+            <svg
+              className="absolute left-3 top-3 h-5 w-5 text-gray-400"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+              />
             </svg>
-          </button>
+            <input
+              type="text"
+              placeholder="Search chats..."
+              value={search}
+              onChange={(e: any) => setSearch(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+            />
+          </div>
         </div>
-        <div className="relative mx-6 mb-2">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-            strokeWidth={2}
-            stroke="currentColor"
-            className="w-5 h-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
-          >
-            <circle cx="11" cy="11" r="7" stroke="currentColor" strokeWidth="2" />
-            <line x1="16" y1="16" x2="21" y2="21" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-          </svg>
-          <input
-            type="text"
-            placeholder="Search..."
-            className="pl-10 px-3 py-2 rounded border border-gray-300 focus:outline-none focus:ring w-full"
-            value={search}
-            onChange={(e: ChangeEvent<HTMLInputElement>) => setSearch(e.target.value)}
-          />
-        </div>
+
+        {/* Chat List */}
         <div className="flex-1 overflow-y-auto">
-          {filteredChats.map((chat) => (
-            <FadeContent key={chat._id} delay={150} duration={800}>
-              <div
-                className={`flex items-center px-6 py-3 cursor-pointer transition-colors ${selectedChat._id === chat._id ? 'bg-gray-100' : 'hover:bg-gray-50'}`}
-                onClick={() => handleChatClick(chat)}
-              >
-                <div className="bg-purple-400 rounded-full w-8 h-8 flex items-center justify-center text-md font-bold text-white mr-4">
-                  {chat.name[0]}
+          {chats.length === 0 ? (
+            <div className="p-6 text-center text-gray-500">
+              No chats yet. Create your first chat!
+            </div>
+          ) : (
+            chats
+              .filter(chat => 
+                chat.name.toLowerCase().includes(search.toLowerCase())
+              )
+              .map((chat) => (
+                <div key={chat._id}>
+                  <FadeContent delay={150} duration={800}>                    <div
+                      onClick={() => handleChatSelect(chat)}
+                      className={`flex items-center px-6 py-3 cursor-pointer transition-colors ${
+                        selectedChat?._id === chat._id ? 'bg-gray-100' : 'hover:bg-gray-50'
+                      }`}
+                    >
+                    <div className="flex-shrink-0 mr-3">
+                      <div className="w-10 h-10 bg-purple-600 rounded-full flex items-center justify-center">
+                        <span className="text-white font-semibold text-sm">
+                          {chat.type === 'private' ? chat.name.charAt(0).toUpperCase() : '#'}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between">
+                        <p className="text-sm font-medium text-gray-900 truncate">
+                          {chat.type === 'private' ? chat.name : `# ${chat.name}`}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          {chat.lastMessageTime || new Date(chat.updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </p>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <p className="text-sm text-gray-500 truncate">
+                          {chat.lastMessage || 'No messages yet'}
+                        </p>
+                        {chat.unreadCount && chat.unreadCount > 0 && (
+                          <span className="inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white bg-red-600 rounded-full">
+                            {chat.unreadCount}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  </FadeContent>
                 </div>
-                <div className="flex-1 min-w-0">
-                  <div className="font-bold truncate">{chat.name}</div>
-                  <div className="text-xs text-gray-500 truncate">{chat.lastMessage}</div>
-                </div>
-                <div className="flex flex-col items-end ml-4 min-w-[48px]">
-                  <span className="text-xs text-gray-400 mb-1">{chat.lastMessageTime}</span>
-                  {(chat.unreadCount || 0) > 0 && (
-                    <span className="bg-purple-600 text-white text-xs rounded-full px-2 py-0.5 font-bold shadow mt-0.5">
-                      {chat.unreadCount}
-                    </span>
-                  )}
-                </div>
-              </div>
-            </FadeContent>
-          ))}
+              ))
+          )}
         </div>
-        
-        {/* Create Chat Modal */}
-        {showCreateModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
-            <div className="bg-white rounded-xl shadow-xl p-8 min-w-[340px] relative">
-              <button className="absolute top-2 right-2 text-gray-400 hover:text-gray-600 text-xl" onClick={() => setShowCreateModal(false)}>&times;</button>
-              <h2 className="text-xl font-bold mb-4">Create New Chat</h2>
-              {/* Chat Type Selector */}
-              <div className="mb-4">
-                <label className="block text-sm font-semibold mb-1">Chat Type</label>
-                <div className="flex gap-4">
+      </div>
+
+      {/* Main Chat Area */}
+      <div className="flex-1 flex flex-col">
+        {selectedChat ? (
+          <>
+            {/* Chat Header */}
+            <div className="bg-white border-b border-gray-200 px-6 py-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center">
+                  <div className="w-8 h-8 bg-purple-600 rounded-full flex items-center justify-center mr-3">
+                    <span className="text-white font-semibold text-sm">
+                      {selectedChat.type === 'private' ? selectedChat.name.charAt(0).toUpperCase() : '#'}
+                    </span>
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-semibold text-gray-900">
+                      {selectedChat.type === 'private' ? selectedChat.name : `# ${selectedChat.name}`}
+                    </h2>
+                    <p className="text-sm text-gray-500">
+                      {getChatMembers(selectedChat).length} members
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center space-x-2">
                   <button
-                    type="button"
-                    className={`px-4 py-2 rounded-lg font-semibold ${chatType === 'public' ? 'bg-purple-600 text-white' : 'bg-gray-200 text-gray-700'}`}
-                    onClick={() => setChatType('public')}
+                    onClick={() => setShowMembersModal(true)}
+                    className="text-gray-400 hover:text-gray-600 transition-colors"
                   >
-                    Group
-                  </button>
-                  <button
-                    type="button"
-                    className={`px-4 py-2 rounded-lg font-semibold ${chatType === 'private' ? 'bg-purple-600 text-white' : 'bg-gray-200 text-gray-700'}`}
-                    onClick={() => setChatType('private')}
-                  >
-                    Private
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
+                    </svg>
                   </button>
                 </div>
               </div>
-              {/* Group Chat Name Input */}
+            </div>
+
+            {/* Messages */}
+            <div className="flex-1 overflow-y-auto p-6 space-y-4">
+              {selectedChat.messages && selectedChat.messages.length > 0 ? (
+                selectedChat.messages.map((msg) => {
+                  const isOwnMessage = msg.senderId === user?.id || msg.senderName === user?.username || msg.senderName === 'You';
+                  
+                  return (
+                    <div key={msg._id}>
+                      <FadeContent delay={100} duration={600}>
+                        <div className={`flex ${isOwnMessage ? 'justify-end' : 'justify-start'} mb-4`}>
+                          <div className={`flex items-start space-x-2 max-w-[70%] ${isOwnMessage ? 'flex-row-reverse space-x-reverse' : ''}`}>
+                            {/* Avatar - only show for incoming messages */}
+                            {!isOwnMessage && (
+                              <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center flex-shrink-0">
+                                <span className="text-gray-600 font-semibold text-xs">
+                                  {msg.senderName.charAt(0).toUpperCase()}
+                                </span>
+                              </div>
+                            )}
+                            
+                            {/* Message bubble */}
+                            <div className={`rounded-lg px-4 py-2 ${
+                              isOwnMessage 
+                                ? 'bg-purple-600 text-white' 
+                                : 'bg-gray-100 text-gray-900'
+                            }`}>
+                              {/* Sender name - only show for incoming messages */}
+                              {!isOwnMessage && (
+                                <div className="text-xs font-medium text-gray-600 mb-1">
+                                  {msg.senderName}
+                                </div>
+                              )}
+                              
+                              {/* Message content */}
+                              <p className="text-sm">{msg.content}</p>
+                              
+                              {/* Timestamp */}
+                              <div className={`text-xs mt-1 ${
+                                isOwnMessage ? 'text-purple-100' : 'text-gray-500'
+                              }`}>
+                                {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </FadeContent>
+                    </div>
+                  );
+                })
+              ) : (
+                <div className="text-center text-gray-500 py-8">
+                  No messages yet. Start the conversation!
+                </div>
+              )}
+              <div ref={messagesEndRef} />
+            </div>
+
+            {/* Message Input */}
+            <div className="bg-white border-t border-gray-200 p-4">
+              <form onSubmit={handleSendMessage} className="flex items-center space-x-2">
+                {/* Attachment Button */}
+                <button
+                  type="button"
+                  onClick={() => console.log('Attachment functionality coming soon...')}
+                  className="text-gray-400 hover:text-gray-600 transition-colors p-2"
+                  title="Add attachment"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                  </svg>
+                </button>
+                
+                {/* Emoji Button */}
+                <button
+                  type="button"
+                  className="text-gray-400 hover:text-gray-600 transition-colors p-2"
+                  title="Add emoji"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </button>
+                
+                {/* Message Input */}
+                <input
+                  type="text"
+                  value={message}
+                  onChange={(e: any) => setMessage(e.target.value)}
+                  placeholder={`Message ${selectedChat.type === 'private' ? selectedChat.name : `# ${selectedChat.name}`}`}
+                  className="flex-1 border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                />
+                
+                {/* Send Button */}
+                <button
+                  type="submit"
+                  disabled={!message.trim()}
+                  className="bg-purple-600 text-white p-2 rounded-full hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  title="Send message"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 12h14m-7-7l7 7-7 7" />
+                  </svg>
+                </button>
+              </form>
+            </div>
+          </>
+        ) : (
+          <div className="flex-1 flex items-center justify-center bg-gray-50">
+            <div className="text-center">
+              <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+              </svg>
+              <h3 className="mt-2 text-sm font-medium text-gray-900">No chat selected</h3>
+              <p className="mt-1 text-sm text-gray-500">Choose a chat from the sidebar to start messaging</p>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Create Chat Modal */}
+      {showCreateModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-96 max-h-[80vh] overflow-y-auto">
+            <h3 className="text-lg font-semibold mb-4">Create New Chat</h3>
+            
+            <div className="mb-4">
+              <div className="flex space-x-2 mb-4">
+                <button
+                  onClick={() => setChatType('public')}
+                  className={`px-4 py-2 rounded-lg font-semibold ${
+                    chatType === 'public' ? 'bg-purple-600 text-white' : 'bg-gray-200 text-gray-700'
+                  }`}
+                >
+                  Public
+                </button>
+                <button
+                  onClick={() => setChatType('private')}
+                  className={`px-4 py-2 rounded-lg font-semibold ${
+                    chatType === 'private' ? 'bg-purple-600 text-white' : 'bg-gray-200 text-gray-700'
+                  }`}
+                >
+                  Private
+                </button>
+              </div>
+
               {chatType === 'public' && (
-                <div className="mb-3">
-                  <label className="block text-sm font-semibold mb-1">Chat Name</label>
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Chat Name
+                  </label>
                   <input
                     type="text"
-                    className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:outline-none"
-                    placeholder="Enter chat name..."
                     value={newChatName}
-                    onChange={e => setNewChatName(e.target.value)}
+                    onChange={(e: any) => setNewChatName(e.target.value)}
+                    placeholder="Enter chat name"
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                   />
                 </div>
               )}
-              {/* Members Input */}
-              <div className="mb-3">
-                <label className="block text-sm font-semibold mb-1">Members</label>
-                <div className="flex gap-2 mb-2 relative">
+
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Add Members
+                </label>
+                <div className="relative">
                   <input
                     type="text"
-                    className="flex-1 rounded border border-gray-300 px-3 py-2 text-sm focus:outline-none"
-                    placeholder="Add member name..."
                     value={memberInput}
-                    onChange={(e) => {
+                    onChange={(e: any) => {
                       setMemberInput(e.target.value);
-                      setMemberSuggestion(null);
+                      const suggestion = filteredMembersForNewChat.find(m =>
+                        m.userName.toLowerCase().startsWith(e.target.value.toLowerCase())
+                      );
+                      setMemberSuggestion(suggestion?.userName || null);
                     }}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
+                    onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => {
+                      if (e.key === "Enter") {
                         e.preventDefault();
                         handleAddMember();
-                      } else if (e.key === 'ArrowDown' && filteredSuggestions.length > 0) {
-                        setMemberSuggestion(filteredSuggestions[0]);
+                      } else if (e.key === "Tab" && memberSuggestion) {
+                        e.preventDefault();
+                        setMemberInput(memberSuggestion);
                       }
                     }}
-                    autoComplete="off"
-                    disabled={chatType === 'private' && newChatMembers.length === 1}
+                    placeholder="Type member name"
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                   />
-                  {/* Suggestions dropdown */}
-                  {memberInput && filteredSuggestions.length > 0 && (
-                    <div className="absolute left-0 top-full mt-1 w-full bg-white border border-gray-200 rounded shadow z-10">
-                      {filteredSuggestions.map((suggestion) => (
-                        <div
-                          key={suggestion}
-                          className={`px-3 py-2 text-sm cursor-pointer hover:bg-purple-100 ${
-                            memberSuggestion === suggestion ? 'bg-purple-100' : ''
-                          }`}
-                          onMouseDown={() => handleSelectSuggestion(suggestion)}
-                        >
-                          {suggestion}
-                        </div>
-                      ))}
+                  {memberSuggestion && memberInput && (
+                    <div className="absolute top-0 left-0 w-full px-3 py-2 text-gray-400 pointer-events-none">
+                      <span className="invisible">{memberInput}</span>
+                      <span>{memberSuggestion.slice(memberInput.length)}</span>
                     </div>
                   )}
-                  <button
-                    type="button"
-                    className="px-3 py-2 rounded bg-purple-600 text-white hover:bg-purple-700 text-sm font-semibold"
-                    onClick={handleAddMember}
-                    disabled={
-                      !WORKPLACE_MEMBERS.includes(memberInput.trim()) ||
-                      newChatMembers.includes(memberInput.trim()) ||
-                      (chatType === 'private' && newChatMembers.length === 1)
-                    }
-                  >
-                    Add
-                  </button>
                 </div>
-                <div className="flex flex-wrap gap-2">
-                  {newChatMembers.map((member) => (
-                    <span
-                      key={member}
-                      className="bg-gray-200 rounded-2xl px-4 py-1 text-sm font-medium flex items-center gap-1"
-                    >
-                      {member}
-                      <button
-                        type="button"
-                        className="ml-1 text-gray-400 hover:text-gray-700"
-                        onClick={() =>
-                          setNewChatMembers(newChatMembers.filter((m) => m !== member))
-                        }
+                
+                {filteredMembersForNewChat.length > 0 && memberInput && (
+                  <div className="mt-2 bg-white border border-gray-300 rounded-lg shadow-lg max-h-32 overflow-y-auto">
+                    {filteredMembersForNewChat.slice(0, 5).map((member) => (
+                      <div
+                        key={member.userId}
+                        onClick={() => {
+                          setMemberInput(member.userName);
+                          handleAddMember();
+                        }}
+                        className="px-3 py-2 hover:bg-gray-100 cursor-pointer"
                       >
-                        &times;
-                      </button>
-                    </span>
-                  ))}
+                        {member.userName}
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                <button
+                  onClick={handleAddMember}
+                  disabled={
+                    !memberInput.trim() ||
+                    !workspaceMembers.some(m => m.userName === memberInput.trim()) ||
+                    newChatMembers.includes(memberInput.trim())
+                  }
+                  className="mt-2 bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  Add Member
+                </button>
+              </div>
+
+              {newChatMembers.length > 0 && (
+                <div className="mb-4">
+                  <p className="text-sm font-medium text-gray-700 mb-2">Selected Members:</p>
+                  <div className="flex flex-wrap gap-2">
+                    {newChatMembers.map((member) => (
+                      <span
+                        key={member}
+                        className="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm flex items-center"
+                      >
+                        {member}
+                        <button
+                          onClick={() => setNewChatMembers(newChatMembers.filter(m => m !== member))}
+                          className="ml-2 text-purple-600 hover:text-purple-800"
+                        >
+                          ×
+                        </button>
+                      </span>
+                    ))}
+                  </div>
                 </div>
-              </div>
-              <div className="flex justify-end gap-2 mt-6">
-                <button
-                  type="button"
-                  className="px-4 py-2 rounded bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold"
-                  onClick={() => setShowCreateModal(false)}
-                >Cancel</button>
-                <button
-                  type="button"
-                  className="px-4 py-2 rounded bg-purple-600 hover:bg-purple-700 text-white font-semibold"
-                  onClick={handleCreateChat}
-                  disabled={(chatType === 'public' && (!newChatName.trim() || newChatMembers.length === 0)) || (chatType === 'private' && newChatMembers.length !== 1)}
-                >Create</button>
-              </div>
+              )}
+            </div>
+
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={() => {
+                  setShowCreateModal(false);
+                  setNewChatName("");
+                  setNewChatMembers([]);
+                  setMemberInput("");
+                  setChatType('public');
+                }}
+                className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleCreateChat}
+                disabled={
+                  (chatType === 'public' && (!newChatName.trim() || newChatMembers.length === 0)) ||
+                  (chatType === 'private' && newChatMembers.length !== 1)
+                }
+                className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                Create Chat
+              </button>
             </div>
           </div>
-        )}
-      </FadeContent>
+        </div>
+      )}
 
-      {/* Chat Window */}
-      <FadeContent className="flex-1 flex flex-col bg-[#fcfbff] h-full min-h-0 relative" delay={200}>
-        <div
-          className="flex items-center p-6 border-b border-gray-200 cursor-pointer select-none"
-          onClick={() => setShowMembersModal(true)}
-        >
-          <div className="bg-purple-400 rounded-full w-10 h-10 flex items-center justify-center text-lg font-bold text-white mr-4">
-            {selectedChat.name[0]}
-          </div>
-          <div>
-            <div className="text-2xl font-bold">{selectedChat.name}</div>
-            {/* Group members inline display */}
-            {getChatMembers(selectedChat).length > 2 && (
-              <div className="text-xs text-gray-500 mt-1">
-                {getChatMembers(selectedChat).slice(0, 5).join(", ")}
-                {getChatMembers(selectedChat).length > 5 && (
-                  <>
-                    {", "}
-                    <span
-                      className="underline cursor-pointer hover:text-purple-600"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setShowMembersModal(true);
-                      }}
+      {/* Members Modal */}
+      {showMembersModal && selectedChat && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-96 max-h-[70vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold">Chat Members</h3>
+              <button
+                onClick={() => setShowMembersModal(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                ×
+              </button>
+            </div>
+            
+            <div className="space-y-3">
+              {getChatMembers(selectedChat).map((member) => (
+                <div key={member} className="flex items-center justify-between">
+                  <div className="flex items-center">
+                    <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center mr-3">
+                      <span className="text-gray-600 font-semibold text-sm">
+                        {member.charAt(0).toUpperCase()}
+                      </span>
+                    </div>
+                    <span className="text-gray-900">{member}</span>
+                    {selectedChat.ownerName === member && (
+                      <span className="ml-2 text-xs bg-purple-100 text-purple-800 px-2 py-1 rounded-full">
+                        Owner
+                      </span>
+                    )}
+                  </div>
+                  {isCurrentUserOwner(selectedChat) && member !== user?.username && (
+                    <button
+                      onClick={() => handleRemoveChatMember(member)}
+                      className="text-red-600 hover:text-red-800 text-sm"
                     >
-                      and {getChatMembers(selectedChat).length - 5} more
-                    </span>
-                  </>
-                )}
+                      Remove
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            {isCurrentUserOwner(selectedChat) && (
+              <div className="mt-4 pt-4 border-t border-gray-200">
+                <button
+                  onClick={() => {
+                    setShowMembersModal(false);
+                    setShowAddMembersModal(true);
+                  }}
+                  className="w-full bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors"
+                >
+                  Add Members
+                </button>
               </div>
             )}
           </div>
         </div>
-        
-        {/* Members Modal */}
-        {showMembersModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
-            <div className="bg-white rounded-xl shadow-xl p-8 min-w-[340px] relative">
-              <button
-                className="absolute top-2 right-2 text-gray-400 hover:text-gray-600 text-xl"
-                onClick={() => setShowMembersModal(false)}
-              >
-                &times;
-              </button>
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-bold">Group Members</h2>
-                {/* Add member button in modal */}
-                {isCurrentUserOwner(selectedChat) && (
-                  <button
-                    className="w-8 h-8 rounded-full flex items-center justify-center bg-purple-600 hover:bg-purple-700 text-white text-lg font-bold shadow ml-2"
-                    title="Add member"
-                    onClick={() => setShowAddMembersModal(true)}
+      )}
+
+      {/* Add Members Modal */}
+      {showAddMembersModal && selectedChat && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-96">
+            <h3 className="text-lg font-semibold mb-4">Add Member</h3>
+            
+            <div className="relative mb-4">
+              <input
+                type="text"
+                value={addMemberInput}
+                onChange={(e: any) => {
+                  setAddMemberInput(e.target.value);
+                  const suggestion = filteredMembersForAdd.find(m =>
+                    m.userName.toLowerCase().startsWith(e.target.value.toLowerCase())
+                  );
+                  setAddMemberSuggestion(suggestion?.userName || null);
+                }}
+                placeholder="Type member name"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              />
+              {addMemberSuggestion && addMemberInput && (
+                <div className="absolute top-0 left-0 w-full px-3 py-2 text-gray-400 pointer-events-none">
+                  <span className="invisible">{addMemberInput}</span>
+                  <span>{addMemberSuggestion.slice(addMemberInput.length)}</span>
+                </div>
+              )}
+            </div>
+            
+            {filteredMembersForAdd.length > 0 && addMemberInput && (
+              <div className="mb-4 bg-white border border-gray-300 rounded-lg shadow-lg max-h-32 overflow-y-auto">
+                {filteredMembersForAdd.slice(0, 5).map((member) => (
+                  <div
+                    key={member.userId}
+                    onClick={() => setAddMemberInput(member.userName)}
+                    className="px-3 py-2 hover:bg-gray-100 cursor-pointer"
                   >
-                    +
-                  </button>
-                )}
-              </div>
-              {/* Owner at top */}
-              <div className="flex items-center gap-2 mb-2">
-                <span className="font-bold text-purple-700">{selectedChat.ownerName}</span>
-                <span className="bg-yellow-300 text-yellow-900 rounded px-2 py-0.5 text-xs font-semibold">Owner</span>
-              </div>
-              {/* Other members */}
-              <div className="flex flex-col gap-1">
-                {selectedChat.members?.filter((m) => m.userId !== selectedChat.ownerId).map((member) => (
-                  <div key={member._id} className="flex items-center gap-2">
-                    <span>{member.userName}</span>
-                    {/* Only owner can remove members, can't remove yourself */}
-                    {isCurrentUserOwner(selectedChat) &&
-                      member.userId !== CURRENT_USER.id && (
-                        <button
-                          className="ml-1 px-2 py-0.5 rounded bg-red-100 hover:bg-red-200 text-red-700 text-xs font-semibold"
-                          onClick={() => handleRemoveMember(member.userName)}
-                        >
-                          Remove
-                        </button>
-                      )}
+                    {member.userName}
                   </div>
                 ))}
               </div>
+            )}
+
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={() => {
+                  setShowAddMembersModal(false);
+                  setAddMemberInput("");
+                  setAddMemberSuggestion(null);
+                }}
+                className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleAddChatMember}
+                disabled={
+                  !addMemberInput.trim() ||
+                  !workspaceMembers.some(m => m.userName === addMemberInput.trim()) ||
+                  getChatMembers(selectedChat).includes(addMemberInput.trim())
+                }
+                className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                Add Member
+              </button>
             </div>
-            {/* Add Members Modal (stacked on top) */}
-            {showAddMembersModal && (
-              <div className="fixed inset-0 z-60 flex items-center justify-center bg-black bg-opacity-30">
-                <div className="bg-white rounded-xl shadow-xl p-6 min-w-[320px] relative">
-                  <button className="absolute top-2 right-2 text-gray-400 hover:text-gray-600 text-xl" onClick={() => setShowAddMembersModal(false)}>&times;</button>
-                  <h2 className="text-lg font-bold mb-4">Add Member</h2>
-                  <div className="flex gap-2 mb-2 relative">
-                    <input
-                      type="text"
-                      className="flex-1 rounded border border-gray-300 px-3 py-2 text-sm focus:outline-none"
-                      placeholder="Add member name..."
-                      value={addMemberInput}
-                      onChange={e => {
-                        setAddMemberInput(e.target.value);
-                        setAddMemberSuggestion(null);
-                      }}
-                      onKeyDown={e => {
-                        if (e.key === 'Enter') {
-                          e.preventDefault();
-                          handleAddMemberToGroup();
-                        } else if (e.key === 'ArrowDown' && addFilteredSuggestions.length > 0) {
-                          setAddMemberSuggestion(addFilteredSuggestions[0]);
-                        }
-                      }}
-                      autoComplete="off"
-                    />
-                    {/* Suggestions dropdown */}
-                    {addMemberInput && addFilteredSuggestions.length > 0 && (
-                      <div className="absolute left-0 top-full mt-1 w-full bg-white border border-gray-200 rounded shadow z-10">
-                        {addFilteredSuggestions.map((suggestion: string) => (
-                          <div
-                            key={suggestion}
-                            className={`px-3 py-2 text-sm cursor-pointer hover:bg-purple-100 ${addMemberSuggestion === suggestion ? 'bg-purple-100' : ''}`}
-                            onMouseDown={() => {
-                              setAddMemberInput(suggestion);
-                              setAddMemberSuggestion(suggestion);
-                            }}
-                          >
-                            {suggestion}
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                    <button
-                      type="button"
-                      className="px-3 py-2 rounded bg-purple-600 text-white hover:bg-purple-700 text-sm font-semibold"
-                      onClick={handleAddMemberToGroup}
-                      disabled={
-                        !WORKPLACE_MEMBERS.includes(addMemberInput.trim()) ||
-                        getChatMembers(selectedChat).includes(addMemberInput.trim())
-                      }
-                    >Add</button>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-        
-        {/* Centered chat area with whitespace and min height */}
-        <div className="flex-1 flex flex-col items-center justify-end overflow-y-auto min-h-0">
-          <div className="w-full max-w-2xl flex flex-col gap-6 px-6 py-8 mx-auto min-h-[450px]">
-            {(!selectedChat.messages || selectedChat.messages.length === 0) ? (
-              <FadeContent className="text-gray-400 text-center mt-10" delay={300}>No messages yet.</FadeContent>
-            ) : (
-              selectedChat.messages.map((msg: Message, idx: number) => (
-                <FadeContent 
-                  key={msg._id || idx}
-                  className={`flex ${msg.senderName === "You" ? "justify-end pl-16" : "justify-start pr-16"}`}
-                  delay={300 + idx * 50}
-                  duration={600}
-                >
-                  <div
-                    className={`rounded-2xl px-5 py-3 max-w-[70%] text-sm shadow-md border ${
-                      msg.senderName === "You"
-                        ? "bg-white border-gray-300 text-gray-900"
-                        : "bg-purple-100 border-purple-200 text-gray-800"
-                    }`}
-                    style={{wordBreak: 'break-word'}}
-                  >
-                    {/* Always show sender name above message unless it's 'You' */}
-                    {msg.senderName !== "You" && (
-                      <div className="font-bold text-xs mb-1 text-purple-700">{msg.senderName}</div>
-                    )}
-                    {msg.content}
-                  </div>
-                </FadeContent>
-              ))
-            )}
-            {/* Scroll anchor */}
-            <div ref={messagesEndRef} />
           </div>
         </div>
-        
-        {/* Message Input - Edge-to-Edge, WhatsApp style */}
-        <FadeContent 
-          className="flex items-center gap-2 p-4 border-t border-gray-200 bg-white sticky bottom-0 left-0 right-0 z-10 w-full"
-          style={{boxShadow: '0 -2px 16px 0 rgba(80,0,120,0.06)'}}
-          delay={400}
-        >
-          <form
-            className="flex items-center gap-2 w-full"
-            onSubmit={(e: FormEvent<HTMLFormElement>) => {
-              e.preventDefault();
-              if (message.trim()) {
-                const newMessage: Message = {
-                  _id: `msg_${Date.now()}`,
-                  channelId: selectedChat._id,
-                  senderId: CURRENT_USER.id,
-                  senderName: CURRENT_USER.name,
-                  content: message,
-                  type: "text",
-                  status: "sent",
-                  isDeleted: false,
-                  isEdited: false,
-                  createdAt: new Date().toISOString(),
-                  updatedAt: new Date().toISOString()
-                };
-
-                setSelectedChat((prev: Chat) => ({
-                  ...prev,
-                  messages: [...(prev.messages || []), newMessage],
-                }));
-                setMessage("");
-              }
-            }}
-          >
-            {/* Attachment Button */}
-            <button type="button" className="p-2 rounded-full hover:bg-gray-100 text-gray-500 flex-shrink-0">
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-6 h-6">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M15.172 7l-6.586 6.586a2 2 0 002.828 2.828l7.07-7.07a4 4 0 00-5.657-5.657l-7.071 7.07a6 6 0 008.485 8.486l6.364-6.364" />
-              </svg>
-            </button>
-            {/* Emoji Button */}
-            <button type="button" className="p-2 rounded-full hover:bg-gray-100 text-gray-500 flex-shrink-0">
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-6 h-6">
-                <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" />
-                <circle cx="9" cy="10" r="1" fill="currentColor" />
-                <circle cx="15" cy="10" r="1" fill="currentColor" />
-                <path strokeLinecap="round" strokeLinejoin="round" d="M8 15s1.5 2 4 2 4-2 4-2" />
-              </svg>
-            </button>
-            <input
-              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none"
-              placeholder="Type Message Here..."
-              value={message}
-              onChange={(e: ChangeEvent<HTMLInputElement>) => setMessage(e.target.value)}
-            />
-            <button
-              type="submit"
-              className="ml-2 p-2 rounded-full bg-purple-600 hover:bg-purple-700 text-white flex items-center justify-center flex-shrink-0"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-                strokeWidth={2}
-                stroke="currentColor"
-                className="w-6 h-6"
-                style={{ transform: 'translate(1px, 1px)' }}
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 19.5l15-7.5-15-7.5v6.75L16.5 12l-12 1.5v6.75z" />
-              </svg>
-            </button>
-          </form>
-        </FadeContent>
-      </FadeContent>
+      )}
     </div>
   );
 };
