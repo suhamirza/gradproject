@@ -3,8 +3,10 @@ import { useState, useEffect } from 'react';
 import { FaLock, FaPlus, FaTrash, FaPencilAlt, FaGlobe } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
 import { useWorkspace } from '../../context/WorkspaceContext';
+import { useUser } from '../../context/UserContext';
 import * as TaskService from '../../services/taskService';
 import { organizationService, type OrganizationMember } from '../../services/organizationService';
+import { chatService } from '../../services/chatService';
 import FadeContent from '../../components/ReactBits/FadeContent';
 
 // Extract the types we need
@@ -32,6 +34,7 @@ interface ProjectWithTag extends Project {
 
 const Lists: React.FC = () => {
   const navigate = useNavigate();
+  const { user } = useUser();
   
   // Use useWorkspace with fallback
   let currentWorkspace = null;
@@ -151,9 +154,7 @@ const Lists: React.FC = () => {
         tag,
         mockId: mockId, // Add stable mockId from the start
         visibility: newListVisibility // Add visibility setting
-      };
-
-      console.log('✅ Creating mock project:', mockProject);
+      };      console.log('✅ Creating mock project:', mockProject);
 
       setProjects(prev => [...prev, mockProject]);
       setShowModal(false);
@@ -165,7 +166,28 @@ const Lists: React.FC = () => {
       setNewListMembers([]);
       setNewListVisibility('private');
       
-      console.log('✅ Project created successfully (MOCK)!');
+      console.log('✅ Project created successfully (MOCK)!');      // Auto-create a chat for this list (immediate)
+      if (currentWorkspace) {
+        try {
+          // Get member names and filter out current user (backend will add creator automatically)
+          const allMemberNames = newListMembers.map(m => m.userName || m);
+          const chatMembers = allMemberNames.filter(name => name !== user?.username);
+          
+          console.log('🗨️ Creating auto-chat with members:', chatMembers, '(excluding current user)');
+          
+          await chatService.createChannel(
+            currentWorkspace.id,
+            `${newListTitle} Discussion`, // Chat name based on list name
+            'public', // Default to public
+            chatMembers // Don't include current user, backend should handle that
+          );
+          
+          console.log('✅ Auto-created chat for list immediately');
+        } catch (chatError) {
+          console.error('Failed to create chat for list:', chatError);
+          // Don't block list creation if chat creation fails
+        }
+      }
       
       // Try to call real API in background but don't block UI
       if (currentWorkspace) {
@@ -175,8 +197,7 @@ const Lists: React.FC = () => {
             description: newListDescription || 'describe your list...',
             organizationId: currentWorkspace.id
           };            console.log('📝 Attempting real API call in background...');
-          const apiProject = await TaskService.taskService.createProject(projectRequest);
-          console.log('✅ Real API success:', apiProject);
+          const apiProject = await TaskService.taskService.createProject(projectRequest);          console.log('✅ Real API success:', apiProject);
             // Validate response structure
           if (apiProject && apiProject.id) {            // Update the mock project with real data while preserving stable key
             setProjects(prev => prev.map(p => 
@@ -192,7 +213,8 @@ const Lists: React.FC = () => {
                 visibility: mockProject.visibility
               } : p
             ));
-            console.log('✅ Mock project updated with real API data');
+            console.log('✅ Mock project updated with real API data');            // Don't create another chat here since we already created one immediately
+            // The chat was already created when the mock project was created
           } else {
             console.warn('⚠️ API response missing project data:', apiProject);
             // Keep the mock project as-is if API fails
