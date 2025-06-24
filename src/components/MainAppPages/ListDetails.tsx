@@ -26,6 +26,7 @@ import {
 import { SortableItem } from "../ReactBits/SortableItem";
 import { FaPlus } from 'react-icons/fa';
 import { taskService, type Task as BackendTask, type TaskAssignee, type TaskComment } from '../../services/taskService';
+import { organizationService } from '../../services/organizationService';
 import { useWorkspace } from '../../context/WorkspaceContext';
 import { useUser } from '../../context/UserContext';
 
@@ -77,17 +78,24 @@ const defaultCategories: Category[] = [
     id: "4",
     name: "Blocked",
     status: "blocked",
-    tasks: [],
-  },
+    tasks: [],  },
 ];
 
+interface Member {
+  userId: string;
+  userName: string;
+  role: 'admin' | 'member';
+  joinedAt: string;
+}
+
 // Members will be fetched from organization data
-const dummyMembers = ["Suha Mirza", "Yahya", "Muhammad", "Vedat", "Aisha"];
 
 interface DroppableCategoryProps {
   category: Category;
   children: ReactNode;
   isOver?: boolean;
+  projectId: string;
+  members: Member[];
 }
 
 interface NewTask {
@@ -100,7 +108,7 @@ interface NewTask {
 }
 
 const DroppableCategory = (forwardRef as any)(
-  ({ category, children, isOver }: DroppableCategoryProps, ref: RefObject<HTMLDivElement>) => {
+  ({ category, children, isOver, projectId, members }: DroppableCategoryProps, ref: RefObject<HTMLDivElement>) => {
     const { setNodeRef } = useDroppable({
       id: category.id,
       data: {
@@ -125,15 +133,15 @@ const DroppableCategory = (forwardRef as any)(
 
     const handleSubmit = async (e: React.FormEvent) => {
       e.preventDefault();
-      
-      if (!currentWorkspace || !user) {
+        if (!currentWorkspace || !user) {
         alert('Please make sure you are logged in and have selected a workspace');
         return;
       }
 
-      // For now, we'll need a projectId - this should be passed as a prop or from URL params
-      // This is a temporary solution - you should get the actual projectId from your route or props
-      const projectId = new URLSearchParams(window.location.search).get('projectId') || 'temp-project-id';
+      if (!projectId) {
+        alert('No project selected');
+        return;
+      }
 
       try {
         const taskData = {
@@ -298,11 +306,10 @@ const DroppableCategory = (forwardRef as any)(
                     className="w-full px-4 py-2 border-2 border-[#c7b3d6] rounded-xl outline-none focus:border-[#5C346E] bg-white"
                     value={newTask.assignedUserId}
                     onChange={(e: ChangeEvent<HTMLSelectElement>) => 
-                      setNewTask((prev: NewTask) => ({ ...prev, assignedUserId: e.target.value }))}
-                  >
+                      setNewTask((prev: NewTask) => ({ ...prev, assignedUserId: e.target.value }))}                  >
                     <option value="">Select a member</option>
-                    {dummyMembers.map(member => (
-                      <option key={member} value={member}>{member}</option>
+                    {members.map(member => (
+                      <option key={member.userId} value={member.userId}>{member.userName}</option>
                     ))}
                   </select>
                 </div>
@@ -349,12 +356,12 @@ DroppableCategory.displayName = 'DroppableCategory';
 
 const ListDetails = () => {
   const navigate = useNavigate();
-  const { listName } = useParams<{ listName: string }>();
+  const { projectId, listName } = useParams<{ projectId: string; listName: string }>();
   const [categories, setCategories] = useState<Category[]>(defaultCategories);
   const [showMembersModal, setShowMembersModal] = useState(false);  const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
-  const [overId, setOverId] = useState<string | null>(null);
-  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const [overId, setOverId] = useState<string | null>(null);  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [loading, setLoading] = useState(true);
+  const [members, setMembers] = useState<Member[]>([]);
   const workspace = useWorkspace() as any;
   const userCtx = useUser() as any;
 
@@ -392,12 +399,12 @@ const ListDetails = () => {
       if (!workspace?.currentWorkspace || !userCtx?.user) {
         setLoading(false);
         return;
-      }
-
-      try {
+      }      try {
         setLoading(true);
-        // Get projectId from URL params - you might need to adjust this based on your routing
-        const projectId = new URLSearchParams(window.location.search).get('projectId');
+        
+        // Fetch organization details to get members
+        const orgResponse = await organizationService.getOrganizationById(workspace.currentWorkspace.id);
+        setMembers(orgResponse.organization.allMembers);
         
         const response = await taskService.getTasks(workspace.currentWorkspace.id, projectId || undefined);
         const convertedTasks = response.tasks.map(convertBackendTask);
@@ -414,10 +421,8 @@ const ListDetails = () => {
       } finally {
         setLoading(false);
       }
-    };
-
-    loadTasks();
-  }, [workspace, userCtx]);
+    };    loadTasks();
+  }, [workspace, userCtx, projectId]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -582,11 +587,12 @@ const ListDetails = () => {
             {categories.map((category: Category) => (              <SortableContext
                 items={category.tasks.map((task: Task) => task.id)}
                 strategy={verticalListSortingStrategy}
-              >
-                <DroppableCategory
+              >                <DroppableCategory
                   category={category}
                   isOver={overId === category.id}
-                >                  {category.tasks.map((task: Task) => (
+                  projectId={projectId || ''}
+                  members={members}
+                >{category.tasks.map((task: Task) => (
                     <SortableItem
                       id={task.id}
                       text={task.title}
@@ -729,14 +735,14 @@ const ListDetails = () => {
             </button>
             
             <h3 className="text-xl font-bold mb-6 text-[#5C346E]">Project Members</h3>
-            
-            <div className="space-y-3">
-              {dummyMembers.map((member, index) => (
-                <div key={index} className="flex items-center gap-3 p-3 bg-purple-50 rounded-xl">
+              <div className="space-y-3">
+              {members.map((member) => (
+                <div key={member.userId} className="flex items-center gap-3 p-3 bg-purple-50 rounded-xl">
                   <div className="w-10 h-10 bg-[#5C346E] text-white rounded-full flex items-center justify-center font-bold">
-                    {member.split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase()}
+                    {member.userName.split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase()}
                   </div>
-                  <span className="font-medium">{member}</span>
+                  <span className="font-medium">{member.userName}</span>
+                  <span className="ml-auto text-sm text-gray-600 capitalize">({member.role})</span>
                 </div>
               ))}
             </div>

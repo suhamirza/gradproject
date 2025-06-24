@@ -336,7 +336,7 @@ const Lists: React.FC = () => {
         {projects.map((project) => (
           <FadeContent key={project.mockId || project.id} duration={900} delay={100}>            <div
               className="relative bg-white border-2 border-[#5C346E] rounded-2xl p-6 min-h-[320px] flex flex-col justify-between shadow hover:shadow-lg transition cursor-pointer"
-              onClick={() => navigate(`/app/lists/${encodeURIComponent(project.name)}`)}
+              onClick={() => navigate(`/app/lists/${project.id}/${encodeURIComponent(project.name)}`)}
             >
               {/* Title (editable) */}
               <input

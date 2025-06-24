@@ -65,7 +65,7 @@ const AppRoutes = () => (
           </TitleProvider>
         } />
         
-        <Route path="/app/lists/:listName" element={
+        <Route path="/app/lists/:projectId/:listName" element={
           <TitleProvider>
             <WorkspaceProvider>
               <MainAppPageLayout>
