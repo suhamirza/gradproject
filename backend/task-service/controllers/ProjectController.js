@@ -5,48 +5,13 @@ const OrganizationMember = require("../models/OrganizationMember");
 const express = require("express");
 const router = express.Router();
 
-const checkOrganizationMembership = async (req, res, next) => {
-  try {
-    const { organizationId } = req.body;
-    const userId = req.user.id;
 
-    const member = await OrganizationMember.findOne({
-      where: {
-        organizationId,
-        userId,
-        isActive: true
-      }
-    });
 
-    if (!member) {
-      return res.status(403).json({ error: "You are not a member of this organization" });
-    }
-
-    req.member = member;
-    next();
-  } catch (error) {
-    console.error("Error checking organization membership:", error);
-    res.status(500).json({ error: "Failed to verify organization membership" });
-  }
-};
-
-const checkAdminRole = async (req, res, next) => {
-  try {
-    if (req.member.role !== 'admin') {
-      return res.status(403).json({ error: "Access denied. Admin role required." });
-    }
-    next();
-  } catch (error) {
-    console.error("Error checking admin role:", error);
-    res.status(500).json({ error: "Failed to verify admin role" });
-  }
-};
-
-router.post("/", checkOrganizationMembership, async (req, res) => {
+router.post("/", async (req, res) => {
   try {
     const { organizationId, name, description } = req.body;
-    const userId = req.user.id;
-    const userName = req.user.username;
+    const userId = req.user.nameid;
+    const userName = req.user.unique_name;
 
     if (!organizationId || !name) {
       return res.status(400).json({ error: "Missing required fields" });
@@ -81,17 +46,7 @@ router.get("/organization/:organizationId", async (req, res) => {
       return res.status(404).json({ error: "Organization not found" });
     }
 
-    const member = await OrganizationMember.findOne({
-      where: {
-        organizationId,
-        userId: req.user.id,
-        isActive: true
-      }
-    });
-
-    if (!member) {
-      return res.status(403).json({ error: "You are not a member of this organization" });
-    }
+    
 
     const projects = await Project.findAll({
       where: { organizationId },
@@ -111,17 +66,7 @@ router.get("/:id", async (req, res) => {
       return res.status(404).json({ error: "Project not found" });
     }
 
-    const member = await OrganizationMember.findOne({
-      where: {
-        organizationId: project.organizationId,
-        userId: req.user.id,
-        isActive: true
-      }
-    });
-
-    if (!member) {
-      return res.status(403).json({ error: "You are not a member of this organization" });
-    }
+    
 
     res.json(project);
   } catch (error) {
@@ -130,7 +75,7 @@ router.get("/:id", async (req, res) => {
   }
 });
 
-router.put("/:id", checkOrganizationMembership, checkAdminRole, async (req, res) => {
+router.put("/:id", async (req, res) => {
   try {
     const { id } = req.params;
     const { name, description, status } = req.body;
@@ -140,9 +85,7 @@ router.put("/:id", checkOrganizationMembership, checkAdminRole, async (req, res)
       return res.status(404).json({ error: "Project not found" });
     }
 
-    if (project.organizationId !== req.member.organizationId) {
-      return res.status(403).json({ error: "Project does not belong to your organization" });
-    }
+    
 
     if (name) project.name = name;
     if (description !== undefined) project.description = description;
@@ -156,16 +99,14 @@ router.put("/:id", checkOrganizationMembership, checkAdminRole, async (req, res)
   }
 });
 
-router.patch("/:id/archive", checkOrganizationMembership, checkAdminRole, async (req, res) => {
+router.patch("/:id/archive", async (req, res) => {
   try {
     const project = await Project.findByPk(req.params.id);
     if (!project) {
       return res.status(404).json({ error: "Project not found" });
     }
 
-    if (project.organizationId !== req.member.organizationId) {
-      return res.status(403).json({ error: "Project does not belong to your organization" });
-    }
+   
 
     project.isArchived = true;
     project.status = "archived";
@@ -178,16 +119,14 @@ router.patch("/:id/archive", checkOrganizationMembership, checkAdminRole, async 
   }
 });
 
-router.patch("/:id/unarchive", checkOrganizationMembership, checkAdminRole, async (req, res) => {
+router.patch("/:id/unarchive", async (req, res) => {
   try {
     const project = await Project.findByPk(req.params.id);
     if (!project) {
       return res.status(404).json({ error: "Project not found" });
     }
 
-    if (project.organizationId !== req.member.organizationId) {
-      return res.status(403).json({ error: "Project does not belong to your organization" });
-    }
+    
 
     project.isArchived = false;
     project.status = "active";
@@ -200,17 +139,14 @@ router.patch("/:id/unarchive", checkOrganizationMembership, checkAdminRole, asyn
   }
 });
 
-router.delete("/:id", checkOrganizationMembership, checkAdminRole, async (req, res) => {
+router.delete("/:id", async (req, res) => {
   try {
     const project = await Project.findByPk(req.params.id);
     if (!project) {
       return res.status(404).json({ error: "Project not found" });
     }
 
-    // Verify project belongs to the organization
-    if (project.organizationId !== req.member.organizationId) {
-      return res.status(403).json({ error: "Project does not belong to your organization" });
-    }
+    
 
     await project.destroy();
     res.status(204).send();

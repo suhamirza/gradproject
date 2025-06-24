@@ -9,52 +9,15 @@ const TaskHistory = require("../models/TaskHistory");
 const express = require("express");
 const router = express.Router();
 
-const checkOrganizationMembership = async (req, res, next) => {
-  try {
-    const { organizationId } = req.body;
-    const userId = req.user.id;
 
-    const member = await OrganizationMember.findOne({
-      where: {
-        organizationId,
-        userId,
-        isActive: true,
-      },
-    });
 
-    if (!member) {
-      return res
-        .status(403)
-        .json({ error: "You are not a member of this organization" });
-    }
 
-    req.member = member;
-    next();
-  } catch (error) {
-    console.error("Error checking organization membership:", error);
-    res.status(500).json({ error: "Failed to verify organization membership" });
-  }
-};
-
-const checkAdminRole = async (req, res, next) => {
-  try {
-    if (req.member.role !== "admin") {
-      return res
-        .status(403)
-        .json({ error: "Access denied. Admin role required." });
-    }
-    next();
-  } catch (error) {
-    console.error("Error checking admin role:", error);
-    res.status(500).json({ error: "Failed to verify admin role" });
-  }
-};
 
 // Create a new task
-router.post("/", checkOrganizationMembership, async (req, res) => {
+router.post("/", async (req, res) => {
   try {
     const { projectId, title, description, dueDate, priority } = req.body;
-    const userId = req.user.id;
+    const userId = req.user.nameid;
 
     // Verify project exists and belongs to organization
     const project = await Project.findOne({
@@ -96,10 +59,10 @@ router.post("/", checkOrganizationMembership, async (req, res) => {
 });
 
 // Get task details
-router.get("/:taskId", checkOrganizationMembership, async (req, res) => {
+router.get("/:taskId", async (req, res) => {
   try {
     const { taskId } = req.params;
-    const { organizationId } = req.body;
+    const { organizationId } = req.query;
 
     console.log(`Fetching task details for taskId: ${taskId}, organizationId: ${organizationId}`);
 
@@ -157,11 +120,11 @@ router.get("/:taskId", checkOrganizationMembership, async (req, res) => {
 });
 
 // Update a task
-router.put("/:taskId", checkOrganizationMembership, async (req, res) => {
+router.put("/:taskId", async (req, res) => {
   try {
     const { taskId } = req.params;
     const { organizationId, title, description, dueDate, priority, status } = req.body;
-    const userId = req.user.id;
+    const userId = req.user.nameid;
 
     console.log(`Updating task ${taskId} with data:`, {
       organizationId,
@@ -308,7 +271,7 @@ router.put("/:taskId", checkOrganizationMembership, async (req, res) => {
 });
 
 // Delete a task
-router.delete("/:taskId", checkOrganizationMembership, async (req, res) => {
+router.delete("/:taskId", async (req, res) => {
   try {
     const task = await Task.findOne({
       where: {
@@ -330,10 +293,10 @@ router.delete("/:taskId", checkOrganizationMembership, async (req, res) => {
 });
 
 // List tasks
-router.get("/", checkOrganizationMembership, async (req, res) => {
+router.get("/", async (req, res) => {
   try {
     const { projectId, status, priority, page = 1, limit = 10 } = req.query;
-    const { organizationId } = req.body;
+    const { organizationId } = req.query;
     const offset = (page - 1) * limit;
 
     const where = {
@@ -374,7 +337,7 @@ router.get("/", checkOrganizationMembership, async (req, res) => {
 });
 
 // Assign user to task
-router.post("/:taskId/assignees", checkOrganizationMembership, async (req, res) => {
+router.post("/:taskId/assignees", async (req, res) => {
   try {
     const { userId, role } = req.body;
     const taskId = req.params.taskId;
@@ -390,24 +353,13 @@ router.post("/:taskId/assignees", checkOrganizationMembership, async (req, res) 
       return res.status(404).json({ error: "Task not found" });
     }
     
-    // Check if user is a member of the organization
-    const member = await OrganizationMember.findOne({
-      where: {
-        organizationId: req.body.organizationId,
-        userId,
-        isActive: true
-      }
-    });
-
-    if (!member) {
-      return res.status(403).json({ error: "User is not a member of this organization" });
-    }
+    
 
     const assignee = await TaskAssignee.create({
       taskId,
       userId,
       role,
-      assignedBy: req.user.id
+      assignedBy: req.user.nameid
     });
 
     // Create history entry
@@ -416,7 +368,7 @@ router.post("/:taskId/assignees", checkOrganizationMembership, async (req, res) 
       fieldChanged: 'assignee',
       oldValue: null,
       newValue: `${userId} (${role})`,
-      changedBy: req.user.id
+      changedBy: req.user.nameid
     });
 
     res.status(201).json(assignee);
@@ -427,7 +379,7 @@ router.post("/:taskId/assignees", checkOrganizationMembership, async (req, res) 
 });
 
 // Add comment to task
-router.post("/:taskId/comments", checkOrganizationMembership, async (req, res) => {
+router.post("/:taskId/comments", async (req, res) => {
   try {
     const { content } = req.body;
     const taskId = req.params.taskId;
@@ -445,7 +397,7 @@ router.post("/:taskId/comments", checkOrganizationMembership, async (req, res) =
 
     const comment = await TaskComment.create({
       taskId,
-      userId: req.user.id,
+      userId: req.user.nameid,
       content
     });
 
@@ -457,7 +409,7 @@ router.post("/:taskId/comments", checkOrganizationMembership, async (req, res) =
 });
 
 // Get task history
-router.get("/:taskId/history", checkOrganizationMembership, async (req, res) => {
+router.get("/:taskId/history", async (req, res) => {
   try {
     const task = await Task.findOne({
       where: {

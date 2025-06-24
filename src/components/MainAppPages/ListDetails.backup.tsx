@@ -1,13 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import {
+  type ReactNode,
+  type RefObject,
+  type ChangeEvent,
+  useState,
+  useMemo,
+  forwardRef,
+  useEffect,
+} from "react";
 import { useParams, useNavigate } from "react-router-dom";
-
-// Compatibility helpers for React 19
-const useMemo = React.useMemo || ((fn: any, _deps: any) => fn());
-const forwardRef = React.forwardRef || ((Component: any) => Component);
-
-type ReactNode = React.ReactNode;
-type RefObject<T> = React.RefObject<T>;
-type ChangeEvent<T> = React.ChangeEvent<T>;
 import type { DragEndEvent, DragOverEvent } from "@dnd-kit/core";
 import {
   DndContext,
@@ -94,12 +94,12 @@ interface NewTask {
   title: string;
   description: string;
   dueDate: string;
-  priority: 'low' | 'medium' | 'high';
+  priority: 'low' | 'medium' | 'high' | 'urgent';
   assignedUserId: string;
   attachments: File[];
 }
 
-const DroppableCategory = (forwardRef as any)(
+const DroppableCategory = forwardRef<HTMLDivElement, DroppableCategoryProps>(
   ({ category, children, isOver }: DroppableCategoryProps, ref: RefObject<HTMLDivElement>) => {
     const { setNodeRef } = useDroppable({
       id: category.id,
@@ -117,11 +117,10 @@ const DroppableCategory = (forwardRef as any)(
       priority: 'medium',
       assignedUserId: '',
       attachments: []
-    });    const workspace = useWorkspace() as any;
-    const userCtx = useUser() as any;
-    
-    const currentWorkspace = workspace?.currentWorkspace;
-    const user = userCtx?.user;
+    });
+
+    const { currentWorkspace } = useWorkspace();
+    const { user } = useUser();
 
     const handleSubmit = async (e: React.FormEvent) => {
       e.preventDefault();
@@ -142,7 +141,7 @@ const DroppableCategory = (forwardRef as any)(
           title: newTask.title,
           description: newTask.description,
           dueDate: newTask.dueDate || undefined,
-          priority: newTask.priority as 'low' | 'medium' | 'high',
+          priority: newTask.priority,
         };
 
         await taskService.createTask(taskData);
@@ -173,15 +172,13 @@ const DroppableCategory = (forwardRef as any)(
           attachments: Array.from(e.target.files || [])
         }));
       }
-    };    const combinedRef = (node: HTMLDivElement) => {
-      try {
-        if (typeof ref === 'function') {
-          (ref as any)(node);
-        } else if (ref && 'current' in ref) {
-          (ref as any).current = node;
-        }
-      } catch (e) {
-        // Ignore ref errors
+    };
+
+    const combinedRef = (node: HTMLDivElement) => {
+      if (typeof ref === 'function') {
+        ref(node);
+      } else if (ref) {
+        ref.current = node;
       }
       setNodeRef(node);
     };
@@ -283,11 +280,12 @@ const DroppableCategory = (forwardRef as any)(
                     className="w-full px-4 py-2 border-2 border-[#c7b3d6] rounded-xl outline-none focus:border-[#5C346E] bg-white"
                     value={newTask.priority}
                     onChange={(e: ChangeEvent<HTMLSelectElement>) => 
-                      setNewTask((prev: NewTask) => ({ ...prev, priority: e.target.value as 'low' | 'medium' | 'high' }))}
+                      setNewTask((prev: NewTask) => ({ ...prev, priority: e.target.value as 'low' | 'medium' | 'high' | 'urgent' }))}
                   >
                     <option value="low">Low</option>
                     <option value="medium">Medium</option>
                     <option value="high">High</option>
+                    <option value="urgent">Urgent</option>
                   </select>
                 </div>
 
@@ -351,45 +349,20 @@ const ListDetails = () => {
   const navigate = useNavigate();
   const { listName } = useParams<{ listName: string }>();
   const [categories, setCategories] = useState<Category[]>(defaultCategories);
-  const [showMembersModal, setShowMembersModal] = useState(false);  const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
+  const [showMembersModal, setShowMembersModal] = useState(false);
+  const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
   const [overId, setOverId] = useState<string | null>(null);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [loading, setLoading] = useState(true);
-  const workspace = useWorkspace() as any;
-  const userCtx = useUser() as any;
+  const [tasks, setTasks] = useState<Task[]>([]);
 
-  // Convert backend task to frontend task format
-  const convertBackendTask = (backendTask: BackendTask): Task => {
-    // Map backend status values to frontend status values
-    let mappedStatus: 'todo' | 'in_progress' | 'completed' | 'blocked';
-    switch (backendTask.status) {
-      case 'todo':
-        mappedStatus = 'todo';
-        break;
-      case 'in_progress':
-        mappedStatus = 'in_progress';
-        break;
-      case 'completed':
-        mappedStatus = 'completed';
-        break;
-      case 'blocked':
-        mappedStatus = 'blocked';
-        break;
-      default:
-        mappedStatus = 'todo';
-        break;
-    }
+  const { currentWorkspace } = useWorkspace();
+  const { user } = useUser();
 
-    return {
-      ...backendTask,
-      status: mappedStatus,
-      isArchived: false, // Backend task might not have this field
-    };
-  };
   // Load tasks when component mounts or workspace changes
   useEffect(() => {
     const loadTasks = async () => {
-      if (!workspace?.currentWorkspace || !userCtx?.user) {
+      if (!currentWorkspace || !user) {
         setLoading(false);
         return;
       }
@@ -399,13 +372,13 @@ const ListDetails = () => {
         // Get projectId from URL params - you might need to adjust this based on your routing
         const projectId = new URLSearchParams(window.location.search).get('projectId');
         
-        const response = await taskService.getTasks(workspace.currentWorkspace.id, projectId || undefined);
-        const convertedTasks = response.tasks.map(convertBackendTask);
+        const response = await taskService.getTasks(currentWorkspace.id, projectId || undefined);
+        setTasks(response.tasks);
         
         // Organize tasks by status into categories
         const updatedCategories = defaultCategories.map(category => ({
           ...category,
-          tasks: convertedTasks.filter(task => task.status === category.status)
+          tasks: response.tasks.filter(task => task.status === category.status)
         }));
         
         setCategories(updatedCategories);
@@ -417,7 +390,7 @@ const ListDetails = () => {
     };
 
     loadTasks();
-  }, [workspace, userCtx]);
+  }, [currentWorkspace, user]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -443,7 +416,7 @@ const ListDetails = () => {
     setActiveTaskId(null);
     setOverId(null);
 
-    if (!over || !workspace?.currentWorkspace) return;
+    if (!over || !currentWorkspace) return;
 
     const activeTaskId = active.id as string;
     const overContainerId = over.id as string;
@@ -461,30 +434,13 @@ const ListDetails = () => {
       return;
     }
 
-    const taskToMove = sourceCategory.tasks.find((task: Task) => task.id === activeTaskId);    if (!taskToMove) return;
+    const taskToMove = sourceCategory.tasks.find((task: Task) => task.id === activeTaskId);
+    if (!taskToMove) return;
 
     try {
-      // Map frontend status to backend status
-      let backendStatus: 'todo' | 'in_progress' | 'completed' | 'blocked';
-      switch (destinationCategory.status) {
-        case 'todo':
-          backendStatus = 'todo';
-          break;
-        case 'in_progress':
-          backendStatus = 'in_progress';
-          break;
-        case 'completed':
-          backendStatus = 'completed';
-          break;
-        case 'blocked':
-          backendStatus = 'blocked';
-          break;
-        default:
-          backendStatus = 'todo';
-          break;
-      }      // Update task status on backend
-      await taskService.updateTask(activeTaskId, workspace.currentWorkspace.id, {
-        status: backendStatus
+      // Update task status on backend
+      await taskService.updateTask(activeTaskId, currentWorkspace.id, {
+        status: destinationCategory.status
       });
 
       // Update local state
@@ -533,13 +489,50 @@ const ListDetails = () => {
       </div>
     );
   }
-  if (!workspace?.currentWorkspace || !userCtx?.user) {
+
+  if (!currentWorkspace || !user) {
     return (
       <div className="flex items-center justify-center h-full">
         <div className="text-lg">Please select a workspace and log in to view tasks.</div>
       </div>
     );
   }
+        if (!taskToMove) return prevCategories;
+
+        return prevCategories.map((category: Category) => {
+          if (category.id === sourceCategory.id) {
+            return {
+              ...category,
+              tasks: category.tasks.filter((task: Task) => task.id !== activeTaskId)
+            };
+          }
+          if (category.id === destinationCategory.id) {
+            return {
+              ...category,
+              tasks: [...category.tasks, taskToMove]
+            };
+          }
+          return category;
+        });
+      });
+    }
+  };
+
+  const handleViewTaskDetails = (taskId: string) => {
+    const task = categories
+      .flatMap((category: Category) => category.tasks)
+      .find((task: Task) => task.id === taskId);
+    if (task) {
+      setSelectedTask(task);
+    }
+  };
+
+  const activeTask = useMemo(() => {
+    if (!activeTaskId) return null;
+    return categories
+      .flatMap((category: Category) => category.tasks)
+      .find((task: Task) => task.id === activeTaskId) || null;
+  }, [activeTaskId, categories]);
 
   return (
     <div className="flex flex-col h-full">
@@ -547,21 +540,51 @@ const ListDetails = () => {
       <div className="flex items-center justify-between px-6 py-4 border-b border-gray-300">
         <div className="flex items-center gap-4">
           <button
-            onClick={() => navigate(-1)}
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            onClick={() => navigate('/app/lists')}
+            className="w-8 h-8 flex items-center justify-center rounded-full text-[#5C346E] hover:bg-[#f7f0ff] transition-colors"
+            title="Back to Lists"
           >
-            ←
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              strokeWidth={2.5}
+              stroke="currentColor"
+              className="w-5 h-5"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18"
+              />
+            </svg>
           </button>
-          <h1 className="text-2xl font-bold text-[#5C346E]">
-            {listName || 'Task Board'}
-          </h1>
+          <h1 className="text-2xl font-bold">{listName}</h1>
+          <div className="flex flex-row gap-2 relative">
+            {dummyMembers.slice(0, 5).map((member, idx) => (
+              <div
+                key={member}
+                className="w-11 h-11 rounded-full bg-[#e9e0f3] flex items-center justify-center font-bold text-[#5C346E] text-lg border-2 border-white shadow"
+                title={member}
+                style={{ zIndex: 10 - idx, marginLeft: idx === 0 ? 0 : -25 }}
+              >
+                {member.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase()}
+              </div>
+            ))}
+            {dummyMembers.length > 5 && (
+              <button
+                className="flex items-center px-2 h-11 ml-[-25px] bg-transparent relative z-0 hover:bg-[#f7f0ff] rounded-full border-none outline-none transition"
+                style={{ border: "none" }}
+                title="Show all members"
+                onClick={() => setShowMembersModal(true)}
+              >
+                <span className="text-xl text-[#5C346E] ml-2" style={{ letterSpacing: "2px" }}>...</span>
+                <span className="text-xl text-[#5C346E] font-bold">+</span>
+              </button>
+            )}
+          </div>
         </div>
-        <button
-          onClick={() => setShowMembersModal(true)}
-          className="px-4 py-2 bg-[#5C346E] text-white rounded-lg hover:bg-[#7d4ea7] transition-colors"
-        >
-          View Members
-        </button>
+        <span className="text-sm text-gray-500">ID: #726849</span>
       </div>
 
       {/* Categories */}
@@ -577,39 +600,37 @@ const ListDetails = () => {
           }
         }}
       >
-        <div className="flex-1 p-6 overflow-x-auto">
-          <div className="flex gap-6 min-w-fit">
-            {categories.map((category: Category) => (              <SortableContext
+        <div className="flex-1 flex gap-4 p-6 overflow-x-auto">
+          {categories.map((category: Category) => (
+            <DroppableCategory 
+              key={category.id} 
+              category={category}
+              isOver={overId === category.id}
+            >
+              <SortableContext
                 items={category.tasks.map((task: Task) => task.id)}
                 strategy={verticalListSortingStrategy}
               >
-                <DroppableCategory
-                  category={category}
-                  isOver={overId === category.id}
-                >                  {category.tasks.map((task: Task) => (
-                    <SortableItem
-                      id={task.id}
-                      text={task.title}
-                      details={task.description}
-                      deadline={task.dueDate}
-                      assignedTo={task.assignees?.[0]?.userName}
-                      attachments={[]} // TODO: implement attachments
-                      onViewDetails={() => handleViewTaskDetails(task.id)}
-                    />
-                  ))}
-                </DroppableCategory>
+                {category.tasks.map((task: Task) => (
+                  <SortableItem 
+                    key={task.id} 
+                    id={task.id} 
+                    text={task.text}
+                    details={task.details}
+                    deadline={task.deadline}
+                    assignedTo={task.assignedTo}
+                    attachments={task.attachments}
+                    onViewDetails={() => handleViewTaskDetails(task.id)}
+                  />
+                ))}
               </SortableContext>
-            ))}
-          </div>
+            </DroppableCategory>
+          ))}
         </div>
-
         <DragOverlay>
           {activeTask && (
-            <div className="bg-white p-3 rounded-lg shadow-lg border-2 border-purple-500 opacity-90">
-              <div className="font-medium text-gray-900">{activeTask.title}</div>
-              {activeTask.description && (
-                <div className="text-sm text-gray-600 mt-1">{activeTask.description}</div>
-              )}
+            <div className="bg-purple-100 text-gray-800 p-3 rounded-lg shadow opacity-90 cursor-grabbing select-none">
+              {activeTask.text}
             </div>
           )}
         </DragOverlay>
@@ -618,96 +639,79 @@ const ListDetails = () => {
       {/* Task Details Modal */}
       {selectedTask && (
         <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
-          <div className="bg-white rounded-2xl p-8 w-full max-w-2xl shadow-xl border-2 border-[#5C346E] relative max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-2xl p-8 w-full max-w-lg shadow-xl border-2 border-[#5C346E] relative">
             <button
               className="absolute top-2 right-4 text-2xl text-gray-400 hover:text-[#5C346E] focus:outline-none"
               onClick={() => setSelectedTask(null)}
             >
               &times;
             </button>
+            <h3 className="text-xl font-bold mb-6 text-[#5C346E]">Task Details</h3>
             
-            <h3 className="text-2xl font-bold mb-6 text-[#5C346E]">Task Details</h3>
-            
-            {/* Task Title */}
-            <div className="mb-4">
-              <label className="block text-[#5C346E] font-bold mb-2">Title</label>
-              <div className="px-4 py-2 bg-purple-50 rounded-xl">{selectedTask.title}</div>
-            </div>
+            <div className="space-y-4">
+              {/* Task Title */}
+              <div>
+                <label className="block text-[#5C346E] font-bold mb-1">Task Title</label>
+                <div className="px-4 py-2 bg-purple-50 rounded-xl">{selectedTask.text}</div>
+              </div>
 
-            {/* Task Description */}
-            {selectedTask.description && (
-              <div className="mb-4">
-                <label className="block text-[#5C346E] font-bold mb-2">Description</label>
-                <div className="px-4 py-2 bg-purple-50 rounded-xl">
-                  {selectedTask.description}
+              {/* Task Details */}
+              {selectedTask.details && (
+                <div>
+                  <label className="block text-[#5C346E] font-bold mb-1">Details</label>
+                  <div className="px-4 py-2 bg-purple-50 rounded-xl whitespace-pre-wrap">
+                    {selectedTask.details}
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
 
-            {/* Due Date */}
-            {selectedTask.dueDate && (
-              <div className="mb-4">
-                <label className="block text-[#5C346E] font-bold mb-2">Due Date</label>
-                <div className="px-4 py-2 bg-purple-50 rounded-xl">
-                  {new Date(selectedTask.dueDate).toLocaleString()}
+              {/* Deadline */}
+              {selectedTask.deadline && (
+                <div>
+                  <label className="block text-[#5C346E] font-bold mb-1">Deadline</label>
+                  <div className="px-4 py-2 bg-purple-50 rounded-xl">
+                    {new Date(selectedTask.deadline).toLocaleString()}
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
 
-            {/* Priority */}
-            <div className="mb-4">
-              <label className="block text-[#5C346E] font-bold mb-2">Priority</label>
-              <div className="px-4 py-2 bg-purple-50 rounded-xl capitalize">
-                {selectedTask.priority}
-              </div>
-            </div>
-
-            {/* Status */}
-            <div className="mb-4">
-              <label className="block text-[#5C346E] font-bold mb-2">Status</label>
-              <div className="px-4 py-2 bg-purple-50 rounded-xl capitalize">
-                {selectedTask.status.replace('_', ' ')}
-              </div>
-            </div>
-
-            {/* Assignees */}
-            {selectedTask.assignees && selectedTask.assignees.length > 0 && (
-              <div className="mb-4">
-                <label className="block text-[#5C346E] font-bold mb-2">Assignees</label>
-                <div className="space-y-2">
-                  {selectedTask.assignees.map((assignee: TaskAssignee) => (
-                    <div key={assignee.id} className="flex items-center gap-3 px-4 py-2 bg-purple-50 rounded-xl">
-                      <div className="w-8 h-8 bg-[#5C346E] text-white rounded-full flex items-center justify-center text-sm font-bold">
-                        {assignee.userName?.slice(0, 2).toUpperCase() || 'U'}
-                      </div>
-                      <span>{assignee.userName || 'Unknown User'}</span>
-                      <span className="ml-auto text-sm text-gray-600 capitalize">({assignee.role})</span>
+              {/* Assigned To */}
+              {selectedTask.assignedTo && (
+                <div>
+                  <label className="block text-[#5C346E] font-bold mb-1">Assigned To</label>
+                  <div className="flex items-center gap-3 px-4 py-2 bg-purple-50 rounded-xl">
+                    <div className="w-8 h-8 rounded-full bg-[#e9e0f3] flex items-center justify-center font-bold text-[#5C346E] text-sm border-2 border-white shadow">
+                      {selectedTask.assignedTo.split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase()}
                     </div>
-                  ))}
+                    <span>{selectedTask.assignedTo}</span>
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
 
-            {/* Comments */}
-            {selectedTask.comments && selectedTask.comments.length > 0 && (
-              <div className="mb-6">
-                <label className="block text-[#5C346E] font-bold mb-2">Comments</label>
-                <div className="space-y-2 max-h-40 overflow-y-auto">
-                  {selectedTask.comments.map((comment: TaskComment) => (
-                    <div key={comment.id} className="px-4 py-2 bg-purple-50 rounded-xl">
-                      <div className="text-sm text-gray-600 mb-1">
-                        {comment.userName || 'Unknown User'} - {new Date(comment.createdAt).toLocaleString()}
+              {/* Attachments */}
+              {selectedTask.attachments && selectedTask.attachments.length > 0 && (
+                <div>
+                  <label className="block text-[#5C346E] font-bold mb-1">Attachments</label>
+                  <div className="space-y-2">
+                    {selectedTask.attachments.map((file: string, index: number) => (
+                      <div 
+                        key={index}
+                        className="flex items-center gap-2 px-4 py-2 bg-purple-50 rounded-xl"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-[#5C346E]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                        </svg>
+                        <span className="truncate">{file}</span>
                       </div>
-                      <div>{comment.content}</div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
+            </div>
 
-            <div className="flex justify-end">
+            <div className="flex justify-end mt-8">
               <button
-                className="px-6 py-2 rounded-xl bg-[#5C346E] text-white font-bold hover:bg-[#7d4ea7]"
+                className="px-6 py-2 rounded-xl bg-gray-200 text-gray-700 font-bold hover:bg-gray-300"
                 onClick={() => setSelectedTask(null)}
               >
                 Close
@@ -720,34 +724,23 @@ const ListDetails = () => {
       {/* Members Modal */}
       {showMembersModal && (
         <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
-          <div className="bg-white rounded-2xl p-8 w-full max-w-md shadow-xl border-2 border-[#5C346E] relative">
+          <div className="bg-white rounded-2xl p-8 w-full max-w-sm shadow-xl border-2 border-[#5C346E] relative">
             <button
               className="absolute top-2 right-4 text-2xl text-gray-400 hover:text-[#5C346E] focus:outline-none"
               onClick={() => setShowMembersModal(false)}
             >
               &times;
             </button>
-            
-            <h3 className="text-xl font-bold mb-6 text-[#5C346E]">Project Members</h3>
-            
-            <div className="space-y-3">
-              {dummyMembers.map((member, index) => (
-                <div key={index} className="flex items-center gap-3 p-3 bg-purple-50 rounded-xl">
-                  <div className="w-10 h-10 bg-[#5C346E] text-white rounded-full flex items-center justify-center font-bold">
-                    {member.split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase()}
+            <h3 className="text-xl font-bold mb-4 text-[#5C346E]">List Members</h3>
+            <div className="max-h-60 overflow-y-auto flex flex-col gap-2">
+              {dummyMembers.map((member) => (
+                <div key={member} className="flex items-center gap-3 px-2 py-2 bg-[#f7f0ff] rounded-xl">
+                  <div className="w-9 h-9 rounded-full bg-[#e9e0f3] flex items-center justify-center font-bold text-[#5C346E] text-base border-2 border-white shadow">
+                    {member.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase()}
                   </div>
-                  <span className="font-medium">{member}</span>
+                  <span className="font-semibold text-[#5C346E]">{member}</span>
                 </div>
               ))}
-            </div>
-            
-            <div className="flex justify-end mt-6">
-              <button
-                className="px-6 py-2 rounded-xl bg-[#5C346E] text-white font-bold hover:bg-[#7d4ea7]"
-                onClick={() => setShowMembersModal(false)}
-              >
-                Close
-              </button>
             </div>
           </div>
         </div>

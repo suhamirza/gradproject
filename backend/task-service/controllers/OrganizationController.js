@@ -11,8 +11,8 @@ const router = express.Router();
 router.post("/", async (req, res) => {
   try {
     const { name, description } = req.body;
-    const userId = req.user.id; // From NameIdentifier claim
-    const userName = req.user.username; // From Name claim
+    const userId = req.user.nameid; // From NameIdentifier claim
+    const userName = req.user.unique_name; // From Name claim
 
     if (!name) {
       return res.status(400).json({ error: "Name is required" });
@@ -94,7 +94,7 @@ router.get("/", async (req, res) => {
 
 router.get('/my-organizations', async (req, res) => {
   try {
-    const userId = req.user.id;
+    const userId = req.user.nameid;
     
     console.log('🔍 MY-ORGANIZATIONS DEBUG:');
     console.log('userId:', userId);
@@ -174,7 +174,7 @@ router.get('/my-organizations', async (req, res) => {
 router.get("/:id", async (req, res) => {
   try {
     const organizationId = req.params.id;
-    const userId = req.user.id;
+    const userId = req.user.nameid;
 
     console.log('🔍 GET SINGLE ORGANIZATION DEBUG:');
     console.log('organizationId:', organizationId);
@@ -246,7 +246,7 @@ router.put("/:id", async (req, res) => {
   try {
     const { name, description, isArchived, status } = req.body;
     const organizationId = req.params.id;
-    const userId = req.user.id;
+    const userId = req.user.nameid;
 
     // Input validation
     if (name && typeof name !== 'string') {
@@ -309,7 +309,7 @@ router.put("/:id", async (req, res) => {
 router.delete("/:id", async (req, res) => {
   try {
     const organizationId = req.params.id;
-    const userId = req.user.id;
+    const userId = req.user.nameid;
     const { force } = req.query;
 
     // First check if organization exists
@@ -385,7 +385,7 @@ router.get("/archived", async (req, res) => {
 router.post("/:id/restore", async (req, res) => {
   try {
     const organizationId = req.params.id;
-    const userId = req.user.id; // Assuming user ID is available in req.user
+    const userId = req.user.nameid; // Assuming user ID is available in req.user
 
     // First check if organization exists
     const organization = await Organization.findByPk(organizationId);
@@ -433,7 +433,7 @@ router.post("/:id/restore", async (req, res) => {
 router.get("/:id/members", async (req, res) => {
   try {
     const organizationId = req.params.id;
-    const userId = req.user.id;
+    const userId = req.user.nameid;
 
     // Check if organization exists
     const organization = await Organization.findByPk(organizationId);
@@ -441,7 +441,7 @@ router.get("/:id/members", async (req, res) => {
       return res.status(404).json({ error: "Organization not found" });
     }
 
-    const currentUserId = req.user.id;
+    const currentUserId = req.user.nameid;
 
     const organizationMember = await OrganizationMember.findOne({
       where: {
@@ -502,7 +502,7 @@ router.post("/:id/members", async (req, res) => {
   try {
     const organizationId = req.params.id;
     const { userId, userName, role } = req.body;
-    const requesterId = req.user.id;
+    const requesterId = req.user.nameid;
 
     if (!userId || !userName || !role) {
       return res
@@ -583,7 +583,7 @@ router.put("/:id/members/:memberId", async (req, res) => {
     const organizationId = req.params.id;
     const memberId = req.params.memberId;
     const { role } = req.body;
-    const requesterId = req.user.id;
+    const requesterId = req.user.nameid;
 
     // Input validation
     if (!role) {
@@ -668,7 +668,7 @@ router.delete("/:id/members/:memberId", async (req, res) => {
   try {
     const organizationId = req.params.id;
     const memberId = req.params.memberId;
-    const requesterId = req.user.id;
+    const requesterId = req.user.nameid;
 
     // Check if organization exists
     const organization = await Organization.findByPk(organizationId);

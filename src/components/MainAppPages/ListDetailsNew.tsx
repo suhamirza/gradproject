@@ -1,13 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import {
+  type ReactNode,
+  type RefObject,
+  type ChangeEvent,
+  useState,
+  useMemo,
+  forwardRef,
+  useEffect,
+} from "react";
 import { useParams, useNavigate } from "react-router-dom";
-
-// Compatibility helpers for React 19
-const useMemo = React.useMemo || ((fn: any, _deps: any) => fn());
-const forwardRef = React.forwardRef || ((Component: any) => Component);
-
-type ReactNode = React.ReactNode;
-type RefObject<T> = React.RefObject<T>;
-type ChangeEvent<T> = React.ChangeEvent<T>;
 import type { DragEndEvent, DragOverEvent } from "@dnd-kit/core";
 import {
   DndContext,
@@ -99,7 +99,7 @@ interface NewTask {
   attachments: File[];
 }
 
-const DroppableCategory = (forwardRef as any)(
+const DroppableCategory = forwardRef<HTMLDivElement, DroppableCategoryProps>(
   ({ category, children, isOver }: DroppableCategoryProps, ref: RefObject<HTMLDivElement>) => {
     const { setNodeRef } = useDroppable({
       id: category.id,
@@ -117,11 +117,10 @@ const DroppableCategory = (forwardRef as any)(
       priority: 'medium',
       assignedUserId: '',
       attachments: []
-    });    const workspace = useWorkspace() as any;
-    const userCtx = useUser() as any;
-    
-    const currentWorkspace = workspace?.currentWorkspace;
-    const user = userCtx?.user;
+    });
+
+    const { currentWorkspace } = useWorkspace();
+    const { user } = useUser();
 
     const handleSubmit = async (e: React.FormEvent) => {
       e.preventDefault();
@@ -173,15 +172,13 @@ const DroppableCategory = (forwardRef as any)(
           attachments: Array.from(e.target.files || [])
         }));
       }
-    };    const combinedRef = (node: HTMLDivElement) => {
-      try {
-        if (typeof ref === 'function') {
-          (ref as any)(node);
-        } else if (ref && 'current' in ref) {
-          (ref as any).current = node;
-        }
-      } catch (e) {
-        // Ignore ref errors
+    };
+
+    const combinedRef = (node: HTMLDivElement) => {
+      if (typeof ref === 'function') {
+        ref(node);
+      } else if (ref) {
+        ref.current = node;
       }
       setNodeRef(node);
     };
@@ -351,45 +348,26 @@ const ListDetails = () => {
   const navigate = useNavigate();
   const { listName } = useParams<{ listName: string }>();
   const [categories, setCategories] = useState<Category[]>(defaultCategories);
-  const [showMembersModal, setShowMembersModal] = useState(false);  const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
+  const [showMembersModal, setShowMembersModal] = useState(false);
+  const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
   const [overId, setOverId] = useState<string | null>(null);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [loading, setLoading] = useState(true);
-  const workspace = useWorkspace() as any;
-  const userCtx = useUser() as any;
+  const [tasks, setTasks] = useState<Task[]>([]);
+
+  const { currentWorkspace } = useWorkspace();
+  const { user } = useUser();
 
   // Convert backend task to frontend task format
-  const convertBackendTask = (backendTask: BackendTask): Task => {
-    // Map backend status values to frontend status values
-    let mappedStatus: 'todo' | 'in_progress' | 'completed' | 'blocked';
-    switch (backendTask.status) {
-      case 'todo':
-        mappedStatus = 'todo';
-        break;
-      case 'in_progress':
-        mappedStatus = 'in_progress';
-        break;
-      case 'completed':
-        mappedStatus = 'completed';
-        break;
-      case 'blocked':
-        mappedStatus = 'blocked';
-        break;
-      default:
-        mappedStatus = 'todo';
-        break;
-    }
+  const convertBackendTask = (backendTask: BackendTask): Task => ({
+    ...backendTask,
+    isArchived: false, // Backend task might not have this field
+  });
 
-    return {
-      ...backendTask,
-      status: mappedStatus,
-      isArchived: false, // Backend task might not have this field
-    };
-  };
   // Load tasks when component mounts or workspace changes
   useEffect(() => {
     const loadTasks = async () => {
-      if (!workspace?.currentWorkspace || !userCtx?.user) {
+      if (!currentWorkspace || !user) {
         setLoading(false);
         return;
       }
@@ -399,8 +377,9 @@ const ListDetails = () => {
         // Get projectId from URL params - you might need to adjust this based on your routing
         const projectId = new URLSearchParams(window.location.search).get('projectId');
         
-        const response = await taskService.getTasks(workspace.currentWorkspace.id, projectId || undefined);
+        const response = await taskService.getTasks(currentWorkspace.id, projectId || undefined);
         const convertedTasks = response.tasks.map(convertBackendTask);
+        setTasks(convertedTasks);
         
         // Organize tasks by status into categories
         const updatedCategories = defaultCategories.map(category => ({
@@ -417,7 +396,7 @@ const ListDetails = () => {
     };
 
     loadTasks();
-  }, [workspace, userCtx]);
+  }, [currentWorkspace, user]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -443,7 +422,7 @@ const ListDetails = () => {
     setActiveTaskId(null);
     setOverId(null);
 
-    if (!over || !workspace?.currentWorkspace) return;
+    if (!over || !currentWorkspace) return;
 
     const activeTaskId = active.id as string;
     const overContainerId = over.id as string;
@@ -461,30 +440,13 @@ const ListDetails = () => {
       return;
     }
 
-    const taskToMove = sourceCategory.tasks.find((task: Task) => task.id === activeTaskId);    if (!taskToMove) return;
+    const taskToMove = sourceCategory.tasks.find((task: Task) => task.id === activeTaskId);
+    if (!taskToMove) return;
 
     try {
-      // Map frontend status to backend status
-      let backendStatus: 'todo' | 'in_progress' | 'completed' | 'blocked';
-      switch (destinationCategory.status) {
-        case 'todo':
-          backendStatus = 'todo';
-          break;
-        case 'in_progress':
-          backendStatus = 'in_progress';
-          break;
-        case 'completed':
-          backendStatus = 'completed';
-          break;
-        case 'blocked':
-          backendStatus = 'blocked';
-          break;
-        default:
-          backendStatus = 'todo';
-          break;
-      }      // Update task status on backend
-      await taskService.updateTask(activeTaskId, workspace.currentWorkspace.id, {
-        status: backendStatus
+      // Update task status on backend
+      await taskService.updateTask(activeTaskId, currentWorkspace.id, {
+        status: destinationCategory.status
       });
 
       // Update local state
@@ -533,7 +495,8 @@ const ListDetails = () => {
       </div>
     );
   }
-  if (!workspace?.currentWorkspace || !userCtx?.user) {
+
+  if (!currentWorkspace || !user) {
     return (
       <div className="flex items-center justify-center h-full">
         <div className="text-lg">Please select a workspace and log in to view tasks.</div>
@@ -579,21 +542,25 @@ const ListDetails = () => {
       >
         <div className="flex-1 p-6 overflow-x-auto">
           <div className="flex gap-6 min-w-fit">
-            {categories.map((category: Category) => (              <SortableContext
+            {categories.map((category: Category) => (
+              <SortableContext
+                key={category.id}
                 items={category.tasks.map((task: Task) => task.id)}
                 strategy={verticalListSortingStrategy}
               >
                 <DroppableCategory
                   category={category}
                   isOver={overId === category.id}
-                >                  {category.tasks.map((task: Task) => (
+                >
+                  {category.tasks.map((task: Task) => (
                     <SortableItem
+                      key={task.id}
                       id={task.id}
-                      text={task.title}
-                      details={task.description}
-                      deadline={task.dueDate}
-                      assignedTo={task.assignees?.[0]?.userName}
-                      attachments={[]} // TODO: implement attachments
+                      title={task.title}
+                      description={task.description}
+                      dueDate={task.dueDate}
+                      priority={task.priority}
+                      assignees={task.assignees}
                       onViewDetails={() => handleViewTaskDetails(task.id)}
                     />
                   ))}
