@@ -47,7 +47,7 @@ export default function Workspaces() {
           name: org.name,
           description: org.description ?? '',
           memberCount: org.memberCount ?? 1,
-          role: 'owner' as const, // User's organizations are owned by them
+          role: org.userRole ?? 'member', // Use userRole or default to 'member'
           createdAt: org.createdAt,
           lastActivity: org.updatedAt,
           isArchived: org.isArchived,

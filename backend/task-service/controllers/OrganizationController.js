@@ -90,17 +90,49 @@ router.get("/", async (req, res) => {
   }
 });
 
-// Get all organizations by current user only
+// Replace the /my-organizations endpoint with this corrected version:
+
 router.get('/my-organizations', async (req, res) => {
   try {
     const userId = req.user.id;
-    const organizations = await Organization.findAll({
-      where: { ownerId: userId},
-      order: [["createdAt", "DESC"]],
+    
+    console.log('🔍 MY-ORGANIZATIONS DEBUG:');
+    console.log('userId:', userId);
+    console.log('userId type:', typeof userId);
+    
+    // Get all organization memberships for the user
+    const membershipData = await OrganizationMember.findAll({
+      where: { 
+        userId: userId,
+        isActive: true 
+      },
+      order: [['joinedAt', 'DESC']]
     });
 
-    // Get member counts for each organization
-    const organizationsWithMemberCount = await Promise.all(
+    console.log('Found memberships:', membershipData.length);
+
+    // Get the organizations for these memberships
+    const organizationIds = membershipData.map(m => m.organizationId);
+    
+    if (organizationIds.length === 0) {
+      return res.json({
+        message: "No organizations found",
+        organizations: []
+      });
+    }
+
+    const organizations = await Organization.findAll({
+      where: {
+        id: organizationIds,
+        isArchived: false,
+        status: 'active'
+      }
+    });
+
+    console.log('Found organizations:', organizations.length);
+
+    // Transform the data to include member counts and user roles
+    const organizationsWithDetails = await Promise.all(
       organizations.map(async (org) => {
         const memberCount = await OrganizationMember.count({
           where: { 
@@ -109,40 +141,53 @@ router.get('/my-organizations', async (req, res) => {
           }
         });
 
+        // Find this user's membership for this organization
+        const userMembership = membershipData.find(m => m.organizationId === org.id);
+
         return {
           ...org.toJSON(),
-          memberCount
+          memberCount,
+          userRole: userMembership ? userMembership.role : 'member', // Include the user's role
+          joinedAt: userMembership ? userMembership.joinedAt : org.createdAt
         };
       })
     );
 
+    console.log('Final organizations with details:', organizationsWithDetails.length);
+
     res.json({
       message: "Organizations fetched successfully",
-      organizations: organizationsWithMemberCount
+      organizations: organizationsWithDetails
     });
     
   } catch (error) {
+    console.error('Error in /my-organizations:', error);
     res.status(500).json({
       error: "Failed to fetch organizations",
       details: error.message,
     });
   }
 });
+// Add this around line 160, right after the /my-organizations endpoint:
 
-// Get a single organization (public access)
+// Get a single organization by ID
 router.get("/:id", async (req, res) => {
   try {
     const organizationId = req.params.id;
     const userId = req.user.id;
 
-    const organization = await Organization.findByPk(organizationId);
+    console.log('🔍 GET SINGLE ORGANIZATION DEBUG:');
+    console.log('organizationId:', organizationId);
+    console.log('userId:', userId);
 
+    // Check if organization exists
+    const organization = await Organization.findByPk(organizationId);
     if (!organization) {
       return res.status(404).json({ error: "Organization not found" });
     }
 
-    // Check if user is a member of the organization
-    const organizationMember = await OrganizationMember.findOne({
+    // Check if user is a member of this organization
+    const userMembership = await OrganizationMember.findOne({
       where: {
         organizationId,
         userId,
@@ -150,34 +195,49 @@ router.get("/:id", async (req, res) => {
       },
     });
 
-    if (!organizationMember) {
+    if (!userMembership) {
       return res.status(403).json({
-        error: "Access denied. You must be a member of the organization to view its details.",
+        error: "Access denied. You must be a member of this organization.",
       });
     }
 
-    const organizationResponse = {
-      id: organization.id,
-      name: organization.name,
-      description: organization.description,
-      ownerId: organization.ownerId,
-      ownerName: organization.ownerName,
-      status: organization.status,
-      isArchived: organization.isArchived,
-      createdAt: organization.createdAt,
-      updatedAt: organization.updatedAt,
-      allMembers: await OrganizationMember.findAll({
-        where: { organizationId: organization.id, isActive: true },
-        attributes: ["userId", "userName", "role", "joinedAt", "isActive"],
-      }),
+    // Get member count
+    const memberCount = await OrganizationMember.count({
+      where: { 
+        organizationId: organization.id,
+        isActive: true
+      }
+    });
+
+    // Get all members for this organization
+    const allMembers = await OrganizationMember.findAll({
+      where: {
+        organizationId,
+        isActive: true,
+      },
+      attributes: ["userId", "userName", "role", "joinedAt"],
+      order: [["joinedAt", "ASC"]],
+    });
+
+    const organizationWithDetails = {
+      ...organization.toJSON(),
+      memberCount,
+      userRole: userMembership.role,
+      allMembers,
     };
+
+    console.log('✅ Organization found with', allMembers.length, 'members');
 
     res.json({
       message: "Organization fetched successfully",
-      organization: organizationResponse,
+      organization: organizationWithDetails,
     });
   } catch (error) {
-    res.status(500).json({ error: "Failed to fetch organization" });
+    console.error('Error in GET /organizations/:id:', error);
+    res.status(500).json({
+      error: "Failed to fetch organization",
+      details: error.message,
+    });
   }
 });
 
@@ -435,6 +495,7 @@ router.get("/:id/members", async (req, res) => {
       });
   }
 });
+
 
 // Add a member to an organization
 router.post("/:id/members", async (req, res) => {

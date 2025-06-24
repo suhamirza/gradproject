@@ -34,6 +34,7 @@ export interface Organization {
   createdAt: string;
   updatedAt: string;
   memberCount?: number;
+  userRole?: 'owner' | 'admin' | 'member';
 }
 
 export interface OrganizationMember {
