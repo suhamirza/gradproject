@@ -362,6 +362,8 @@ const ListDetails = () => {
   const [overId, setOverId] = useState<string | null>(null);  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [loading, setLoading] = useState(true);
   const [members, setMembers] = useState<Member[]>([]);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [taskToDelete, setTaskToDelete] = useState<string | null>(null);
   const workspace = useWorkspace() as any;
   const userCtx = useUser() as any;
 
@@ -514,7 +516,6 @@ const ListDetails = () => {
       alert('Failed to update task status. Please try again.');
     }
   };
-
   const handleViewTaskDetails = (taskId: string) => {
     const task = categories
       .flatMap((category: Category) => category.tasks)
@@ -522,6 +523,52 @@ const ListDetails = () => {
     if (task) {
       setSelectedTask(task);
     }
+  };
+  const handleDeleteTask = async (taskId: string) => {
+    if (!workspace?.currentWorkspace) {
+      alert('Please select a workspace to delete tasks.');
+      return;
+    }
+
+    setTaskToDelete(taskId);
+    setShowDeleteConfirm(true);
+  };
+
+  const confirmDeleteTask = async () => {
+    if (!taskToDelete || !workspace?.currentWorkspace) {
+      return;
+    }
+
+    try {
+      await taskService.deleteTask(taskToDelete, workspace.currentWorkspace.id);
+      
+      // Update local state by removing the task from categories
+      setCategories((prevCategories: Category[]) => {
+        return prevCategories.map(category => ({
+          ...category,
+          tasks: category.tasks.filter(task => task.id !== taskToDelete)
+        }));
+      });
+
+      // Close the task details modal if it's the deleted task
+      if (selectedTask?.id === taskToDelete) {
+        setSelectedTask(null);
+      }
+
+      // Close confirmation modal and reset state
+      setShowDeleteConfirm(false);
+      setTaskToDelete(null);
+
+      alert('Task deleted successfully!');
+    } catch (error) {
+      console.error('Failed to delete task:', error);
+      alert('Failed to delete task. Please try again.');
+    }
+  };
+
+  const cancelDeleteTask = () => {
+    setShowDeleteConfirm(false);
+    setTaskToDelete(null);
   };
 
   const activeTask = useMemo(() => {
@@ -709,9 +756,13 @@ const ListDetails = () => {
                   ))}
                 </div>
               </div>
-            )}
-
-            <div className="flex justify-end">
+            )}            <div className="flex justify-end gap-4">
+              <button
+                className="px-6 py-2 rounded-xl bg-red-500 text-white font-bold hover:bg-red-600 transition-colors"
+                onClick={() => handleDeleteTask(selectedTask.id)}
+              >
+                Delete Task
+              </button>
               <button
                 className="px-6 py-2 rounded-xl bg-[#5C346E] text-white font-bold hover:bg-[#7d4ea7]"
                 onClick={() => setSelectedTask(null)}
@@ -754,6 +805,45 @@ const ListDetails = () => {
               >
                 Close
               </button>
+            </div>          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl p-8 w-full max-w-md shadow-xl border-2 border-red-200 relative animate-pulse">
+            <div className="text-center">
+              {/* Warning Icon */}
+              <div className="mx-auto mb-4 w-16 h-16 bg-red-100 rounded-full flex items-center justify-center">
+                <svg className="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.5 0L4.268 18.5c-.77.833.192 2.5 1.732 2.5z" />
+                </svg>
+              </div>
+              
+              {/* Title */}
+              <h3 className="text-xl font-bold mb-4 text-gray-900">Delete Task</h3>
+              
+              {/* Message */}
+              <p className="text-gray-600 mb-6 leading-relaxed">
+                Are you sure you want to delete this task? This action cannot be undone and will permanently remove the task and all its data.
+              </p>
+              
+              {/* Action Buttons */}
+              <div className="flex justify-center gap-4">
+                <button
+                  className="px-6 py-3 rounded-xl bg-gray-200 text-gray-700 font-bold hover:bg-gray-300 transition-colors"
+                  onClick={cancelDeleteTask}
+                >
+                  Cancel
+                </button>
+                <button
+                  className="px-6 py-3 rounded-xl bg-red-500 text-white font-bold hover:bg-red-600 transition-colors shadow-lg"
+                  onClick={confirmDeleteTask}
+                >
+                  Delete Task
+                </button>
+              </div>
             </div>
           </div>
         </div>
