@@ -64,12 +64,7 @@ const AppLayout = () => {
               </div>
               Workspaces
             </button>
-            <a href="#" className="flex items-center px-3 py-2 rounded-lg hover:bg-[#3b2355] transition text-xl font-bold">
-              <div className="w-6 h-6 mr-2">
-                <IoAnalyticsSharp size={24} />
-              </div>
-              Analytics
-            </a>            <button
+                      <button
               onClick={() => navigate('/app/settings')}
               className="flex items-center px-3 py-2 rounded-lg hover:bg-[#3b2355] transition text-xl font-bold w-full text-left"
             >
